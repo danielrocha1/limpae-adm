@@ -8,6 +8,23 @@ import {
   normalizeUsers,
 } from "./lib/normalizers";
 
+async function hydrateUserPayload(payload, { requestJson, token }) {
+  const baseUsers = normalizeUsers(payload);
+
+  const detailedUsers = await Promise.all(
+    baseUsers.map(async (user) => {
+      try {
+        const detail = await requestJson(`/users/${user.id}`, { token });
+        return detail;
+      } catch (error) {
+        return user;
+      }
+    })
+  );
+
+  return detailedUsers;
+}
+
 const reviewAverage = (item) => {
   const value = Number(item?.average_rating || 0);
   return value ? value.toFixed(1) : "-";
@@ -43,6 +60,7 @@ export const resourceConfigs = [
     name: "Usuarios",
     headline: "Base cadastral completa da plataforma",
     endpoint: "/users",
+    hydrate: hydrateUserPayload,
     transform: normalizeUsers,
     columns: [
       { key: "id", label: "ID" },
@@ -65,6 +83,7 @@ export const resourceConfigs = [
     name: "Diaristas",
     headline: "Recorte operacional dos profissionais da rede",
     endpoint: "/users",
+    hydrate: hydrateUserPayload,
     transform: (payload) => {
       const items = normalizeUsers(payload);
       return items.filter((user) => user.role === "diarista");

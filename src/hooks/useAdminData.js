@@ -23,7 +23,20 @@ export function useAdminData(resourceKey) {
         useApiBase: resource.useApiBase,
       });
 
-      const items = resource.transform ? resource.transform(payload) : normalizeArray(payload);
+      const hydratedPayload = resource.hydrate
+        ? await resource.hydrate(payload, { requestJson, token })
+        : payload;
+
+      const items = resource.transform
+        ? resource.transform(hydratedPayload)
+        : normalizeArray(hydratedPayload);
+
+      if (resourceKey === "users" || resourceKey === "diarists") {
+        console.log(`[limpae-admin] raw ${resourceKey} payload`, payload);
+        console.log(`[limpae-admin] hydrated ${resourceKey} payload`, hydratedPayload);
+        console.log(`[limpae-admin] normalized ${resourceKey} items`, items);
+      }
+
       setData(items);
       setMeta({ source: "api", count: items.length });
     } catch (requestError) {
@@ -36,6 +49,11 @@ export function useAdminData(resourceKey) {
       setData(fallback);
       setMeta({ source: "mock", count: fallback.length });
       setError(requestError.message || "Falha ao buscar dados.");
+
+      if (resourceKey === "users" || resourceKey === "diarists") {
+        console.log(`[limpae-admin] fallback ${resourceKey} items`, fallback);
+        console.error(`[limpae-admin] ${resourceKey} fetch error`, requestError);
+      }
     } finally {
       setLoading(false);
     }
