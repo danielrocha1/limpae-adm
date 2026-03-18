@@ -46,6 +46,18 @@ export function CollectionPage({ resourceKey }) {
         </article>
       </div>
 
+      {Array.isArray(resource.highlights) && resource.highlights.length ? (
+        <div className="panel-grid compact">
+          {resource.highlights.map((highlight) => (
+            <article className="info-panel" key={highlight.label}>
+              <span className="eyebrow">{highlight.label}</span>
+              <strong>{highlight.compute(filteredData)}</strong>
+              <p>Indicador calculado a partir do payload normalizado deste modulo.</p>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
       {error && <div className="callout warning">Falha ao consultar a API: {error}</div>}
 
       <section className="table-card">
