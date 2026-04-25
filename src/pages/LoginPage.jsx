@@ -31,21 +31,12 @@ export function LoginPage() {
 
   return (
     <section className="login-layout">
-      <div className="login-hero">
-        <span className="eyebrow">Limpae Admin</span>
-        <h1>Painel administrativo robusto para o ecossistema Limpae</h1>
-        <p>
-          Consolide usuarios, operacao, financeiro, reputacao e auditoria tecnica do
-          backend em uma unica superficie.
-        </p>
-        <div className="callout success">
-          RBAC Administrativo ativo. Acesso restrito a usuários com perfil de administrador
-          para gestão de usuários, serviços e financeiro.
-        </div>
-      </div>
-
       <form className="login-card" onSubmit={handleSubmit}>
-        <h2>Entrar</h2>
+        <div className="login-header">
+          <h2>Entrar no Painel</h2>
+          <p>Use suas credenciais para acessar a administração.</p>
+        </div>
+
         <label>
           E-mail
           <input
