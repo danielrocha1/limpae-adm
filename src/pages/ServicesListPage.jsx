@@ -49,11 +49,13 @@ function yesNo(value) {
 }
 
 function userValue(user, key) {
-  return get(user, key, key?.toLowerCase?.());
+  const snake = key.replace(/[A-Z]/g, (letter, index) => `${index ? "_" : ""}${letter.toLowerCase()}`);
+  return get(user, key, key?.toLowerCase?.(), snake);
 }
 
 function addressValue(address, key) {
-  return get(address, key, key?.toLowerCase?.());
+  const snake = key.replace(/[A-Z]/g, (letter, index) => `${index ? "_" : ""}${letter.toLowerCase()}`);
+  return get(address, key, key?.toLowerCase?.(), snake);
 }
 
 function serviceAddress(service) {
@@ -304,23 +306,28 @@ function Section({ title, children }) {
 
 function UserPanel({ title, user }) {
   if (!user) return <EmptyState text={`${title} não carregado pela API.`} />;
+  const name = userValue(user, "Name");
+  const email = userValue(user, "Email");
+  const role = userValue(user, "Role");
+  const phone = userValue(user, "Phone");
+  const cpf = userValue(user, "Cpf");
+  const photo = userValue(user, "Photo");
   return (
     <div className="rounded-xl border bg-slate-50 p-4 dark:bg-white/[0.04]">
       <div className="flex items-center gap-3">
         <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-200 text-sm font-black dark:bg-white/10">
-          {userValue(user, "Photo") ? <img src={userValue(user, "Photo")} alt="" className="h-full w-full object-cover" /> : String(userValue(user, "Name") || title).slice(0, 2).toUpperCase()}
+          {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : String(name || title).slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-black">{userValue(user, "Name") || "-"}</p>
-          <p className="truncate text-xs text-muted-foreground">{userValue(user, "Email") || "-"}</p>
+          <p className="truncate font-black">{name || "-"}</p>
+          <p className="truncate text-xs text-muted-foreground">{email || "Email nao enviado pela API"}</p>
         </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Detail label="ID" value={userValue(user, "ID")} />
-        <Detail label="Role" value={userValue(user, "Role")} />
-        <Detail label="Telefone" value={userValue(user, "Phone")} />
-        <Detail label="CPF" value={userValue(user, "Cpf")} />
-        <Detail label="Usuário teste" value={yesNo(userValue(user, "IsTestUser"))} />
+        <Detail label="Role" value={role} />
+        <Detail label="Telefone" value={phone} />
+        {cpf !== undefined && <Detail label="CPF" value={cpf} />}
       </div>
     </div>
   );
