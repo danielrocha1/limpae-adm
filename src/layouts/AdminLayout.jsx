@@ -61,7 +61,7 @@ export default function AdminLayout({ children }) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-y-auto border-r border-white/10 bg-[#0b1726] text-slate-100 shadow-2xl transition-transform duration-300 lg:translate-x-0",
+          "admin-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-y-auto border-r border-white/10 bg-[#0b1726] text-slate-100 shadow-2xl transition-transform duration-300 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
