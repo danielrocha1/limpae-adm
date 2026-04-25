@@ -30,6 +30,12 @@ func ConnectDB() {
 		log.Fatal("Erro ao conectar ao banco de dados:", err)
 	}
 
+	// 1. Remover a restrição antiga que bloqueia o cargo 'admin'
+	fmt.Println("Limpando restrições de cargo antigas...")
+	DB.Exec("ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_role")
+	DB.Exec("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check")
+
+	// 2. Rodar a migração para criar as tabelas e a nova restrição
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.EmailVerificationToken{},
