@@ -364,10 +364,22 @@ func GetOpenOffers(c *fiber.Ctx) error {
 	// Se for admin, retorna todas as ofertas de forma simplificada para o painel
 	if userRole == "admin" {
 		var offers []models.Offer
-		if err := config.DB.Preload("Client").Preload("Address").Find(&offers).Error; err != nil {
+		if err := config.DB.
+			Preload("Client").
+			Preload("Address").
+			Preload("AcceptedByDiarist").
+			Preload("Negotiations").
+			Preload("Negotiations.Diarist").
+			Preload("Negotiations.Diarist.DiaristProfile").
+			Find(&offers).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar ofertas"})
 		}
-		return c.JSON(offers)
+
+		response := make([]OfferResponseDTO, 0, len(offers))
+		for _, offer := range offers {
+			response = append(response, toOfferResponseDTO(offer, ""))
+		}
+		return c.JSON(response)
 	}
 
 	if err := requireUserRole(userID, "diarista"); err != nil {
