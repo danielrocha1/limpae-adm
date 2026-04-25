@@ -8,6 +8,7 @@ import UsersListPage from './pages/UsersListPage';
 import UserDetailPage from './pages/UserDetailPage';
 import ServicesListPage from './pages/ServicesListPage';
 import OffersListPage from './pages/OffersListPage';
+import MapPage from './pages/MapPage';
 import LoginPage from './pages/LoginPage';
 import { useAuth } from './context/AuthContext';
 
@@ -51,6 +52,7 @@ function App() {
                   <Route path="/diaristas" element={<UsersListPage roleFilter="diarista" />} />
                   <Route path="/servicos" element={<ServicesListPage />} />
                   <Route path="/ofertas" element={<OffersListPage />} />
+                  <Route path="/mapa" element={<MapPage />} />
                   <Route path="/usuarios/:id" element={<UserDetailPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

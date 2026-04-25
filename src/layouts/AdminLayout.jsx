@@ -7,6 +7,7 @@ import {
   HandCoins,
   LayoutDashboard,
   LogOut,
+  MapPinned,
   Menu,
   Moon,
   Search,
@@ -26,6 +27,7 @@ const navigation = [
   { name: "Diaristas", href: "/diaristas", icon: Users, description: "Profissionais" },
   { name: "Serviços", href: "/servicos", icon: BriefcaseBusiness, description: "Agenda e execucao" },
   { name: "Ofertas", href: "/ofertas", icon: HandCoins, description: "Mural e negociacoes" },
+  { name: "Mapa", href: "/mapa", icon: MapPinned, description: "Usuarios no mapa" },
 ];
 
 export default function AdminLayout({ children }) {
