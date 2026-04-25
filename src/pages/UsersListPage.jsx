@@ -35,6 +35,14 @@ import {
 } from "../lib/schema";
 
 const pageSize = 10;
+const columnWidths = {
+  Name: "w-[260px] max-w-[260px]",
+  Cpf: "w-[140px]",
+  Phone: "w-[140px]",
+  Role: "w-[110px]",
+  EmailVerified: "w-[150px]",
+  CreatedAt: "w-[150px]",
+};
 
 function roleLabel(roleFilter) {
   if (roleFilter === "cliente") return "Clientes";
@@ -210,18 +218,18 @@ export default function UsersListPage({ roleFilter = "todos" }) {
 
       <Card className="overflow-hidden border-0 bg-white shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[820px] table-fixed text-left text-sm">
             <thead>
               <tr className="border-b bg-slate-50 dark:bg-white/[0.04]">
                 {columns.map((field) => (
-                  <th key={field.name} className="px-5 py-4 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  <th key={field.name} className={`${columnWidths[field.name] || "w-[130px]"} px-4 py-4 text-xs font-bold uppercase tracking-wide text-muted-foreground`}>
                     <button className="inline-flex items-center gap-2 hover:text-foreground" onClick={() => toggleSort(field)}>
                       {field.name}
                       <ArrowDownUp className="h-3.5 w-3.5" />
                     </button>
                   </th>
                 ))}
-                <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wide text-muted-foreground">Acoes</th>
+                <th className="sticky right-0 w-[128px] bg-slate-50 px-4 py-4 text-right text-xs font-bold uppercase tracking-wide text-muted-foreground dark:bg-[#132033]">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -231,16 +239,16 @@ export default function UsersListPage({ roleFilter = "todos" }) {
                     const value = getValue(user, field.name);
                     if (field.name === "Name") {
                       return (
-                        <td key={field.name} className="px-5 py-4">
+                        <td key={field.name} className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-lg bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white dark:ring-white/10">
+                            <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200 dark:bg-white/10 dark:text-white dark:ring-white/10">
                               {getValue(user, "Photo") ? (
                                 <img src={getValue(user, "Photo")} alt="" className="h-full w-full object-cover" />
                               ) : (
                                 getUserName(user).slice(0, 2).toUpperCase()
                               )}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="truncate font-bold">{getUserName(user)}</p>
                               <p className="truncate text-xs text-muted-foreground">{getUserEmail(user)}</p>
                             </div>
@@ -250,7 +258,7 @@ export default function UsersListPage({ roleFilter = "todos" }) {
                     }
                     if (field.name === "Role") {
                       return (
-                        <td key={field.name} className="px-5 py-4">
+                        <td key={field.name} className="px-4 py-4">
                           <Badge className={getUserRole(user) === "diarista" ? "bg-teal-500/10 text-teal-700 dark:text-teal-300" : "bg-sky-500/10 text-sky-700 dark:text-sky-300"}>
                             {getUserRole(user) || "-"}
                           </Badge>
@@ -259,14 +267,14 @@ export default function UsersListPage({ roleFilter = "todos" }) {
                     }
                     if (field.name === "EmailVerified") {
                       return (
-                        <td key={field.name} className="px-5 py-4">
+                        <td key={field.name} className="px-4 py-4">
                           <Badge variant={value ? "success" : "warning"}>{value ? "Verificado" : "Pendente"}</Badge>
                         </td>
                       );
                     }
-                    return <td key={field.name} className="px-5 py-4 text-muted-foreground">{formatFieldValue(value, field)}</td>;
+                    return <td key={field.name} className="truncate px-4 py-4 text-muted-foreground">{formatFieldValue(value, field)}</td>;
                   })}
-                  <td className="px-5 py-4">
+                  <td className="sticky right-0 bg-white px-4 py-4 dark:bg-[#0b1726]">
                     <div className="flex justify-end gap-1">
                       <Link
                         to={`/usuarios/${getUserId(user)}`}
