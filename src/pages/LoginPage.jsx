@@ -43,7 +43,7 @@ export function LoginPage() {
             type="email"
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-            placeholder="admin@limpae.com"
+            placeholder="seu@email.com"
             required
           />
         </label>
