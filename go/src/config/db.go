@@ -7,8 +7,6 @@ import (
 
 	"limpae/go/src/models"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -58,6 +56,14 @@ func ConnectDB() {
 
 	if err := ensureServiceTypeColumnLength(); err != nil {
 		log.Fatal("Erro ao alinhar tamanho de service_type:", err)
+	}
+
+	// Forçar role admin para o usuário específico solicitado
+	targetEmail := "daniel.rochats@gmail.com"
+	if err := DB.Model(&models.User{}).Where("email = ?", targetEmail).Update("role", "admin").Error; err != nil {
+		fmt.Printf("Aviso: Não foi possível atualizar role para %s: %v\n", targetEmail, err)
+	} else {
+		fmt.Printf("Sucesso: Role 'admin' garantida para %s\n", targetEmail)
 	}
 
 	fmt.Println("Banco de dados conectado e migrado com sucesso!")
