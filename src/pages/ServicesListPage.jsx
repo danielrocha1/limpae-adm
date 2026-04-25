@@ -320,7 +320,6 @@ function UserPanel({ title, user }) {
         <Detail label="Role" value={userValue(user, "Role")} />
         <Detail label="Telefone" value={userValue(user, "Phone")} />
         <Detail label="CPF" value={userValue(user, "Cpf")} />
-        <Detail label="Email verificado" value={yesNo(userValue(user, "EmailVerified"))} />
         <Detail label="Usuário teste" value={yesNo(userValue(user, "IsTestUser"))} />
       </div>
     </div>
