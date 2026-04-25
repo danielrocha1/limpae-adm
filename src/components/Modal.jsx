@@ -25,13 +25,13 @@ export default function Modal({ isOpen, onClose, title, children, footer }) {
         className="absolute inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200" 
         onClick={onClose}
       />
-      <div className="relative bg-card border shadow-2xl rounded-xl w-full max-w-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl animate-in flex-col overflow-hidden rounded-xl border bg-card shadow-2xl duration-200 zoom-in-95">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-xl font-bold">{title}</h3>
+        <div className="flex items-center justify-between border-b bg-slate-950 p-6 text-white dark:bg-white/[0.04]">
+          <h3 className="text-xl font-black">{title}</h3>
           <button 
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            className="rounded-lg p-2 transition-colors hover:bg-white/10"
           >
             <X className="w-5 h-5" />
           </button>
@@ -44,7 +44,7 @@ export default function Modal({ isOpen, onClose, title, children, footer }) {
 
         {/* Footer */}
         {footer && (
-          <div className="p-6 border-t bg-secondary/20 flex items-center justify-end gap-3 rounded-b-xl">
+          <div className="flex items-center justify-end gap-3 border-t bg-slate-50 p-6 dark:bg-white/[0.03]">
             {footer}
           </div>
         )}

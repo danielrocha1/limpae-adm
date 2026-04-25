@@ -73,17 +73,20 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
 
   return (
     <form id="user-edit-form" onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-lg border bg-secondary">
+      <div className="rounded-xl border bg-slate-50 p-4 dark:bg-white/[0.04]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-xl border bg-white shadow-sm dark:bg-white/10">
           {formData.Photo ? <img src={formData.Photo} alt="" className="h-full w-full object-cover" /> : <User className="h-8 w-8 text-muted-foreground" />}
         </div>
         <div>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary">
+          <p className="text-sm font-bold">Imagem de perfil</p>
+          <p className="mt-1 text-xs text-muted-foreground">Campo Photo do model User. Use imagem local ou URL salva pela API.</p>
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm font-semibold shadow-sm hover:bg-secondary dark:bg-white/5">
             <Camera className="h-4 w-4" />
             Upload de imagem
             <input className="sr-only" type="file" accept="image/*" onChange={handlePhotoFile} />
           </label>
-          <p className="mt-2 text-xs text-muted-foreground">A imagem e enviada como data URL no campo Photo do model User.</p>
+        </div>
         </div>
       </div>
 
@@ -92,10 +95,10 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
           if (field.name === "Photo") return null;
           if (field.name === "Role") {
             return (
-              <label key={field.name} className="space-y-2 text-sm font-medium">
+              <label key={field.name} className="space-y-2 text-sm font-semibold">
                 <span>{field.name}</span>
                 <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  className="h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                   value={formData[field.name] || ""}
                   onChange={(event) => handleChange(field, event.target.value)}
                 >
@@ -111,7 +114,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
 
           if (field.input === "checkbox") {
             return (
-              <label key={field.name} className="flex h-10 items-center gap-3 self-end rounded-md border px-3 text-sm font-medium">
+              <label key={field.name} className="flex h-11 items-center gap-3 self-end rounded-lg border bg-slate-50 px-3 text-sm font-semibold dark:bg-white/[0.04]">
                 <input
                   type="checkbox"
                   checked={Boolean(formData[field.name])}
@@ -123,9 +126,10 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
           }
 
           return (
-            <label key={field.name} className="space-y-2 text-sm font-medium">
+            <label key={field.name} className="space-y-2 text-sm font-semibold">
               <span>{field.name}</span>
               <Input
+                className="h-11 rounded-lg"
                 type={field.input === "number" ? "number" : field.input === "email" ? "email" : "text"}
                 value={formData[field.name] ?? ""}
                 onChange={(event) => handleChange(field, event.target.value)}
@@ -136,8 +140,8 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
         })}
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={isSaving}>
+      <div className="flex justify-end gap-2 border-t pt-5">
+        <Button className="h-11 rounded-lg bg-slate-950 px-5 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950" type="submit" disabled={isSaving}>
           {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
           {isEditing ? "Salvar alteracoes" : "Criar usuario"}
         </Button>
