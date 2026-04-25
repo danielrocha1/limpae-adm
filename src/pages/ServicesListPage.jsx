@@ -1,15 +1,5 @@
 import React, { useMemo, useState } from "react";
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  MapPin,
-  PlayCircle,
-  Search,
-  UserRound,
-  XCircle,
-} from "lucide-react";
+import { Calendar, CheckCircle2, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
 import { useServices } from "../hooks/useServices";
 import Modal from "../components/Modal";
 import { Badge } from "../components/ui/Badge";
@@ -52,6 +42,18 @@ function money(value) {
 function dateTime(value) {
   if (!value) return "-";
   return new Date(value).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function yesNo(value) {
+  return value ? "Sim" : "Nao";
+}
+
+function userValue(user, key) {
+  return get(user, key, key?.toLowerCase?.());
+}
+
+function addressValue(address, key) {
+  return get(address, key, key?.toLowerCase?.());
 }
 
 function serviceAddress(service) {
@@ -214,26 +216,170 @@ function InfoRow({ icon: Icon, value }) {
 function ServiceDetailsModal({ service, onClose }) {
   if (!service) return null;
   const status = statusOf(service);
+  const client = get(service, "Client", "client");
+  const diarist = get(service, "Diarist", "diarist");
+  const address = get(service, "Address", "address");
+  const offer = get(service, "Offer", "offer");
+  const review = get(service, "Review", "review", "reviews");
   return (
     <Modal isOpen={Boolean(service)} onClose={onClose} title={`Serviço #${get(service, "ID", "id") || ""}`}>
-      <div className="grid gap-4 md:grid-cols-2">
-        <Detail label="Status" value={status} />
-        <Detail label="Valor" value={money(get(service, "TotalPrice", "total_price"))} />
-        <Detail label="Cliente" value={getNested(service, "Client", "Name") || getNested(service, "client", "Name") || "N/A"} />
-        <Detail label="Diarista" value={getNested(service, "Diarist", "Name") || getNested(service, "diarist", "Name") || "Aguardando"} />
-        <Detail label="Data" value={dateTime(get(service, "ScheduledAt", "scheduled_at"))} />
-        <Detail label="Duração" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} />
-        <Detail label="Endereço" value={serviceAddress(service)} className="md:col-span-2" />
+      <div className="space-y-6">
+        <Section title="Resumo do serviço">
+          <div className="grid gap-3 md:grid-cols-4">
+            <Detail label="ID" value={get(service, "ID", "id")} />
+            <Detail label="Status" value={status} />
+            <Detail label="Valor total" value={money(get(service, "TotalPrice", "total_price"))} />
+            <Detail label="Duração" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} />
+            <Detail label="Tipo" value={get(service, "ServiceType", "service_type")} className="md:col-span-2" />
+            <Detail label="Agendado para" value={dateTime(get(service, "ScheduledAt", "scheduled_at"))} />
+            <Detail label="Concluído em" value={dateTime(get(service, "CompletedAt", "completed_at"))} />
+            <Detail label="Criado em" value={dateTime(get(service, "CreatedAt", "created_at"))} />
+            <Detail label="Tem pets" value={yesNo(get(service, "HasPets", "has_pets"))} />
+            <Detail label="Quartos" value={get(service, "RoomCount", "room_count")} />
+            <Detail label="Banheiros" value={get(service, "BathroomCount", "bathroom_count")} />
+          </div>
+        </Section>
+
+        <Section title="IDs e vínculos">
+          <div className="grid gap-3 md:grid-cols-4">
+            <Detail label="OfferID" value={get(service, "OfferID", "offer_id")} />
+            <Detail label="ClientID" value={get(service, "ClientID", "client_id")} />
+            <Detail label="DiaristID" value={get(service, "DiaristID", "diarist_id")} />
+            <Detail label="AddressID" value={get(service, "AddressID", "address_id")} />
+          </div>
+        </Section>
+
+        <Section title="Observações e motivos">
+          <div className="grid gap-3 md:grid-cols-3">
+            <Detail label="Observações" value={get(service, "Observations", "observations")} />
+            <Detail label="Motivo de cancelamento" value={get(service, "CancelReason", "cancel_reason")} />
+            <Detail label="Motivo de rejeição" value={get(service, "RejectionReason", "rejection_reason")} />
+          </div>
+        </Section>
+
+        <Section title="Pessoas vinculadas">
+          <div className="grid gap-4 md:grid-cols-2">
+            <UserPanel title="Cliente" user={client} />
+            <UserPanel title="Diarista" user={diarist} />
+          </div>
+        </Section>
+
+        <Section title="Endereço">
+          <AddressPanel address={address} />
+        </Section>
+
+        <Section title="Oferta vinculada">
+          {offer ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              <Detail label="ID" value={get(offer, "ID", "id")} />
+              <Detail label="Status" value={get(offer, "Status", "status")} />
+              <Detail label="Valor inicial" value={money(get(offer, "InitialValue", "initial_value"))} />
+              <Detail label="Valor atual" value={money(get(offer, "CurrentValue", "current_value"))} />
+              <Detail label="Tipo" value={get(offer, "ServiceType", "service_type")} className="md:col-span-2" />
+              <Detail label="Observações" value={get(offer, "Observations", "observations")} className="md:col-span-2" />
+            </div>
+          ) : (
+            <EmptyState text="Nenhuma oferta carregada junto deste serviço." />
+          )}
+        </Section>
+
+        <Section title="Avaliação">
+          {review ? (
+            <div className="grid gap-3 md:grid-cols-4">
+              <Detail label="ID" value={get(review, "ID", "id")} />
+              <Detail label="Cliente rating" value={get(review, "ClientRating", "client_rating")} />
+              <Detail label="Diarista rating" value={get(review, "DiaristRating", "diarist_rating")} />
+              <Detail label="Criada em" value={dateTime(get(review, "CreatedAt", "created_at"))} />
+              <Detail label="Comentário cliente" value={get(review, "ClientComment", "client_comment")} className="md:col-span-2" />
+              <Detail label="Comentário diarista" value={get(review, "DiaristComment", "diarist_comment")} className="md:col-span-2" />
+            </div>
+          ) : (
+            <EmptyState text="Nenhuma avaliação carregada para este serviço." />
+          )}
+        </Section>
       </div>
     </Modal>
   );
+}
+
+function Section({ title, children }) {
+  return (
+    <section className="space-y-3">
+      <h4 className="text-sm font-black uppercase tracking-wide text-muted-foreground">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+function UserPanel({ title, user }) {
+  if (!user) return <EmptyState text={`${title} não carregado pela API.`} />;
+  return (
+    <div className="rounded-xl border bg-slate-50 p-4 dark:bg-white/[0.04]">
+      <div className="flex items-center gap-3">
+        <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-200 text-sm font-black dark:bg-white/10">
+          {userValue(user, "Photo") ? <img src={userValue(user, "Photo")} alt="" className="h-full w-full object-cover" /> : String(userValue(user, "Name") || title).slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-black">{userValue(user, "Name") || "-"}</p>
+          <p className="truncate text-xs text-muted-foreground">{userValue(user, "Email") || "-"}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Detail label="ID" value={userValue(user, "ID")} />
+        <Detail label="Role" value={userValue(user, "Role")} />
+        <Detail label="Telefone" value={userValue(user, "Phone")} />
+        <Detail label="CPF" value={userValue(user, "Cpf")} />
+        <Detail label="Email verificado" value={yesNo(userValue(user, "EmailVerified"))} />
+        <Detail label="Usuário teste" value={yesNo(userValue(user, "IsTestUser"))} />
+      </div>
+    </div>
+  );
+}
+
+function AddressPanel({ address }) {
+  if (!address) return <EmptyState text="Endereço não carregado pela API." />;
+  const rooms = get(address, "Rooms", "rooms") || [];
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-4">
+        <Detail label="Rua" value={addressValue(address, "Street")} className="md:col-span-2" />
+        <Detail label="Número" value={addressValue(address, "Number")} />
+        <Detail label="Complemento" value={addressValue(address, "Complement")} />
+        <Detail label="Bairro" value={addressValue(address, "Neighborhood")} />
+        <Detail label="Cidade" value={addressValue(address, "City")} />
+        <Detail label="Estado" value={addressValue(address, "State")} />
+        <Detail label="CEP" value={addressValue(address, "Zipcode")} />
+        <Detail label="Tipo residência" value={addressValue(address, "ResidenceType")} />
+        <Detail label="Referência" value={addressValue(address, "ReferencePoint")} className="md:col-span-2" />
+        <Detail label="Latitude" value={addressValue(address, "Latitude")} />
+        <Detail label="Longitude" value={addressValue(address, "Longitude")} />
+      </div>
+      {Array.isArray(rooms) && rooms.length > 0 && (
+        <div className="rounded-lg border p-3">
+          <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Cômodos</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {rooms.map((room) => (
+              <div key={get(room, "ID", "id") || `${get(room, "Name", "name")}`} className="flex justify-between rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-white/[0.04]">
+                <span>{get(room, "Name", "name")}</span>
+                <strong>{get(room, "Quantity", "quantity")}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return <div className="rounded-lg border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground dark:bg-white/[0.04]">{text}</div>;
 }
 
 function Detail({ label, value, className = "" }) {
   return (
     <div className={`rounded-lg border bg-slate-50 p-4 dark:bg-white/[0.04] ${className}`}>
       <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-2 break-words text-sm font-semibold">{value || "-"}</p>
+      <p className="mt-2 break-words text-sm font-semibold">{value === undefined || value === null || value === "" ? "-" : value}</p>
     </div>
   );
 }
