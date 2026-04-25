@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { CalendarClock, HandCoins, MapPin, Search, UserRound } from "lucide-react";
 import { useOffers } from "../hooks/useOffers";
+import Modal from "../components/Modal";
 import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -26,6 +28,7 @@ function get(object, ...keys) {
 export default function OffersListPage() {
   const { data: offers = [], isLoading } = useOffers();
   const [search, setSearch] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState(null);
 
   const filteredOffers = useMemo(() => {
     const term = search.toLowerCase();
@@ -119,6 +122,10 @@ export default function OffersListPage() {
                     <p className="mt-1 font-bold">{money(get(offer, "CurrentValue", "current_value"))}</p>
                   </div>
                 </div>
+
+                <Button variant="outline" className="w-full rounded-lg text-xs font-black" onClick={() => setSelectedOffer(offer)}>
+                  Ver detalhes
+                </Button>
               </div>
             </Card>
           );
@@ -130,6 +137,37 @@ export default function OffersListPage() {
           Nenhuma oferta encontrada.
         </div>
       )}
+
+      <OfferDetailsModal offer={selectedOffer} onClose={() => setSelectedOffer(null)} />
+    </div>
+  );
+}
+
+function OfferDetailsModal({ offer, onClose }) {
+  if (!offer) return null;
+  const client = get(offer, "Client", "client");
+  const address = get(offer, "Address", "address");
+  return (
+    <Modal isOpen={Boolean(offer)} onClose={onClose} title={`Oferta #${get(offer, "ID", "id") || ""}`}>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Detail label="Status" value={get(offer, "Status", "status")} />
+        <Detail label="Tipo de serviço" value={get(offer, "ServiceType", "service_type")} />
+        <Detail label="Cliente" value={client?.Name || client?.name || "Cliente nao informado"} />
+        <Detail label="Data" value={dateTime(get(offer, "ScheduledAt", "scheduled_at"))} />
+        <Detail label="Valor inicial" value={money(get(offer, "InitialValue", "initial_value"))} />
+        <Detail label="Valor atual" value={money(get(offer, "CurrentValue", "current_value"))} />
+        <Detail label="Endereço" value={address?.street || address?.Street || "Endereco nao informado"} className="md:col-span-2" />
+        <Detail label="Observações" value={get(offer, "Observations", "observations") || "-"} className="md:col-span-2" />
+      </div>
+    </Modal>
+  );
+}
+
+function Detail({ label, value, className = "" }) {
+  return (
+    <div className={`rounded-lg border bg-slate-50 p-4 dark:bg-white/[0.04] ${className}`}>
+      <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-2 break-words text-sm font-semibold">{value || "-"}</p>
     </div>
   );
 }
