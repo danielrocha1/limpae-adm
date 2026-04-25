@@ -22,12 +22,16 @@ export function AuthProvider({ children }) {
         useApiBase: false,
       });
 
+      console.log("Resposta do Login:", auth);
+
       const nextToken = auth?.token;
       if (!nextToken) {
+        console.error("Erro: Token não encontrado na resposta");
         throw new Error("A API não retornou um token de acesso válido.");
       }
 
       const nextRole = auth?.role || "user";
+      console.log("Role do usuário:", nextRole);
 
       setToken(nextToken);
       setRole(nextRole);
@@ -36,6 +40,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem(ROLE_KEY, nextRole);
       return { token: nextToken, role: nextRole };
     } catch (requestError) {
+      console.error("Erro detalhado no login:", requestError);
       setStatus("anonymous");
       setError(requestError.message || "Falha ao autenticar com o servidor.");
       throw requestError;

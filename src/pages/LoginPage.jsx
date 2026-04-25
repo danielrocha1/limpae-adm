@@ -14,14 +14,17 @@ export function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setLocalError("");
-
+    console.log("Iniciando tentativa de login para:", form.email);
     try {
       const result = await login(form);
+      console.log("Resultado do login no componente:", result);
       if (result.role !== "admin") {
+        console.warn("Acesso negado: Usuário logado mas não é admin. Role:", result.role);
         logout();
         throw new Error("Acesso negado: apenas administradores podem acessar este painel.");
       }
     } catch (requestError) {
+      console.error("Erro capturado no handleSubmit:", requestError.message);
       if (requestError.message.includes("Acesso negado")) {
         logout();
       }
