@@ -235,7 +235,7 @@ func GetUsers(c *fiber.Ctx) error {
 	// Se for admin, retorna todos os usuários
 	if userRole == "admin" {
 		var users []models.User
-		if err := config.DB.Preload("UserProfile").Preload("DiaristProfile").Preload("Address").Find(&users).Error; err != nil {
+		if err := config.DB.Preload("UserProfile").Preload("DiaristProfile").Preload("Address").Preload("Address.Rooms").Find(&users).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar usuários"})
 		}
 
@@ -281,10 +281,18 @@ func UpdateUser(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	targetID := c.Params("id")
-	user, err := findScopedUser(userID, targetID)
+	actor, err := loadUserByID(userID)
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Usuário não encontrado"})
+		return c.Status(404).JSON(fiber.Map{"error": "Usuario autenticado nao encontrado"})
+	}
+	targetID := c.Params("id")
+	var user models.User
+	query := config.DB.Preload("UserProfile").Preload("DiaristProfile").Preload("Address").Preload("Address.Rooms")
+	if actor.Role != "admin" {
+		query = query.Where("id = ?", userID)
+	}
+	if err := query.First(&user, targetID).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Usuario nao encontrado"})
 	}
 	var request UserUpdateRequestDTO
 	if decodeErrors := decodeStrictJSON(c, &request); len(decodeErrors) > 0 {
@@ -292,8 +300,15 @@ func UpdateUser(c *fiber.Ctx) error {
 	}
 	validator := &validationCollector{}
 	name := validateOptionalString(validator, "name", request.Name, 100)
+	photo := validateOptionalString(validator, "photo", request.Photo, 255)
 	email := validateEmailField(validator, "email", request.Email)
 	phoneDigits := validatePhoneField(validator, "phone", request.Phone)
+	cpf := strings.TrimSpace(request.Cpf)
+	if cpf == "" {
+		validator.Add("cpf", "is required")
+	} else if !isValidCPF(cpf) {
+		validator.Add("cpf", "is invalid")
+	}
 	if validator.HasErrors() {
 		return writeValidationError(c, validator.errors)
 	}
@@ -303,10 +318,19 @@ func UpdateUser(c *fiber.Ctx) error {
 		return writeValidationError(c, []ValidationFieldError{{Field: "phone", Reason: "must contain only digits"}})
 	}
 
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao iniciar transacao"})
+	}
+
 	user.Name = name
+	if photo != "" {
+		user.Photo = photo
+	}
 	emailChanged := user.Email != email
 	user.Email = email
 	user.Phone = phoneValue
+	user.Cpf = cpf
 	if request.IsTestUser != nil {
 		user.IsTestUser = *request.IsTestUser
 	}
@@ -314,12 +338,92 @@ func UpdateUser(c *fiber.Ctx) error {
 		user.EmailVerified = false
 		user.EmailVerifiedAt = nil
 	}
-	config.DB.Save(&user)
-	if emailChanged {
-		dispatchVerificationEmail(user)
+	if err := tx.Save(&user).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao atualizar usuario"})
+	}
+
+	if request.Address != nil {
+		address, rooms, validationErrors, coordinateErr := buildAddressFromDTO(user.ID, *request.Address)
+		if len(validationErrors) > 0 {
+			tx.Rollback()
+			return writeValidationError(c, validationErrors)
+		}
+		if coordinateErr != nil {
+			tx.Rollback()
+			return c.Status(400).JSON(fiber.Map{"error": "Nao foi possivel localizar o endereco informado"})
+		}
+
+		var existingAddress models.Address
+		if err := tx.Where("user_id = ?", user.ID).Order("id ASC").First(&existingAddress).Error; err != nil {
+			if !isNotFound(err) {
+				tx.Rollback()
+				return c.Status(500).JSON(fiber.Map{"error": "Erro ao carregar endereco"})
+			}
+			if err := tx.Create(&address).Error; err != nil {
+				tx.Rollback()
+				return c.Status(500).JSON(fiber.Map{"error": "Erro ao criar endereco"})
+			}
+			existingAddress = address
+		} else {
+			address.ID = existingAddress.ID
+			if err := tx.Save(&address).Error; err != nil {
+				tx.Rollback()
+				return c.Status(500).JSON(fiber.Map{"error": "Erro ao atualizar endereco"})
+			}
+			existingAddress = address
+		}
+
+		if err := tx.Where("address_id = ?", existingAddress.ID).Delete(&models.AddressRoom{}).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao atualizar comodos"})
+		}
+		for index := range rooms {
+			rooms[index].AddressID = existingAddress.ID
+		}
+		if len(rooms) > 0 {
+			if err := tx.Create(&rooms).Error; err != nil {
+				tx.Rollback()
+				return c.Status(500).JSON(fiber.Map{"error": "Erro ao salvar comodos"})
+			}
+		}
+	}
+
+	if request.ClientPreferences != nil && user.Role == "cliente" {
+		profile, validationErrors := buildUserProfileFromDTO(user.ID, *request.ClientPreferences)
+		if len(validationErrors) > 0 {
+			tx.Rollback()
+			return writeValidationError(c, validationErrors)
+		}
+		if err := tx.Where("user_id = ?", user.ID).Assign(profile).FirstOrCreate(&models.UserProfile{}, models.UserProfile{UserID: user.ID}).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao atualizar preferencias do cliente"})
+		}
+	}
+
+	if request.DiaristProfile != nil && user.Role == "diarista" {
+		profile, validationErrors := buildDiaristProfileFromDTO(user.ID, *request.DiaristProfile)
+		if len(validationErrors) > 0 {
+			tx.Rollback()
+			return writeValidationError(c, validationErrors)
+		}
+		if err := tx.Where("user_id = ?", user.ID).Assign(profile).FirstOrCreate(&models.Diarists{}, models.Diarists{UserID: user.ID}).Error; err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao atualizar perfil da diarista"})
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao salvar alteracoes"})
 	}
 	if err := resolveUserPhoto(&user); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Erro ao gerar acesso da foto"})
+	}
+	if emailChanged {
+		dispatchVerificationEmail(user)
+	}
+	if err := config.DB.Preload("UserProfile").Preload("DiaristProfile").Preload("Address").Preload("Address.Rooms").First(&user, user.ID).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao carregar usuario atualizado"})
 	}
 	return c.JSON(toUserResponseDTO(user))
 }

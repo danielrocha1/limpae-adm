@@ -10211,6 +10211,21 @@ export const modelSchemas = [
         "sensitive": false
       },
       {
+        "name": "Photo",
+        "goType": "string",
+        "baseType": "string",
+        "isArray": false,
+        "isPointer": false,
+        "isRelation": false,
+        "tags": {
+          "json": "photo"
+        },
+        "input": "image",
+        "editable": true,
+        "table": true,
+        "sensitive": false
+      },
+      {
         "name": "Email",
         "goType": "string",
         "baseType": "string",
@@ -10241,6 +10256,21 @@ export const modelSchemas = [
         "sensitive": false
       },
       {
+        "name": "Cpf",
+        "goType": "string",
+        "baseType": "string",
+        "isArray": false,
+        "isPointer": false,
+        "isRelation": false,
+        "tags": {
+          "json": "cpf"
+        },
+        "input": "text",
+        "editable": true,
+        "table": true,
+        "sensitive": false
+      },
+      {
         "name": "IsTestUser",
         "goType": "*bool",
         "baseType": "bool",
@@ -10253,6 +10283,51 @@ export const modelSchemas = [
         "input": "checkbox",
         "editable": true,
         "table": true,
+        "sensitive": false
+      },
+      {
+        "name": "Address",
+        "goType": "*AddressUpsertRequestDTO",
+        "baseType": "AddressUpsertRequestDTO",
+        "isArray": false,
+        "isPointer": true,
+        "isRelation": true,
+        "tags": {
+          "json": "address,omitempty"
+        },
+        "input": "text",
+        "editable": false,
+        "table": false,
+        "sensitive": false
+      },
+      {
+        "name": "ClientPreferences",
+        "goType": "*UserProfileUpsertRequestDTO",
+        "baseType": "UserProfileUpsertRequestDTO",
+        "isArray": false,
+        "isPointer": true,
+        "isRelation": true,
+        "tags": {
+          "json": "client_preferences,omitempty"
+        },
+        "input": "text",
+        "editable": false,
+        "table": false,
+        "sensitive": false
+      },
+      {
+        "name": "DiaristProfile",
+        "goType": "*DiaristProfileUpsertRequestDTO",
+        "baseType": "DiaristProfileUpsertRequestDTO",
+        "isArray": false,
+        "isPointer": true,
+        "isRelation": true,
+        "tags": {
+          "json": "diarist_profile,omitempty"
+        },
+        "input": "text",
+        "editable": false,
+        "table": false,
         "sensitive": false
       }
     ]
