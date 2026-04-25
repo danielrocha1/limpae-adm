@@ -15,10 +15,9 @@ export function CollectionPage({ resourceKey }) {
   }, [data, search]);
 
   return (
-    <section className="page-stack">
+    <div className="page-stack">
       <header className="page-header">
         <div>
-          <span className="eyebrow">Modulo operacional</span>
           <h2>{resource.name}</h2>
           <p>{resource.headline}</p>
         </div>
@@ -27,42 +26,47 @@ export function CollectionPage({ resourceKey }) {
             className="search-input"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={`Buscar em ${resource.name.toLowerCase()}`}
+            placeholder={`Filtrar ${resource.name.toLowerCase()}...`}
           />
-          <button className="ghost-button" onClick={reload}>Atualizar</button>
+          <button className="primary-button" onClick={reload}>
+            🔄 Atualizar
+          </button>
         </div>
       </header>
 
-      <div className="panel-grid compact">
-        <article className="info-panel">
-          <span className="eyebrow">Origem</span>
-          <strong>{meta.source === "api" ? "API em tempo real" : "Fallback controlado"}</strong>
-          <p>{meta.source === "api" ? "Dados lidos do backend Go atual." : "Mostrando dataset de contingencia para preservar a UX."}</p>
-        </article>
-        <article className="info-panel">
-          <span className="eyebrow">Volume</span>
+      <div className="stats-grid">
+        <div className="stat-card ocean">
+          <span className="eyebrow">Status da Conexão</span>
+          <strong>{meta.source === "api" ? "Online" : "Contingência"}</strong>
+          <p>{meta.source === "api" ? "Recebendo dados em tempo real do backend." : "Backend indisponível, usando cache local."}</p>
+        </div>
+        <div className="stat-card forest">
+          <span className="eyebrow">Total de Registros</span>
           <strong>{filteredData.length}</strong>
-          <p>Itens filtrados prontos para analise e operacao.</p>
-        </article>
+          <p>Itens encontrados na listagem atual.</p>
+        </div>
+        {Array.isArray(resource.highlights) && resource.highlights.map((highlight) => (
+          <div className="stat-card sun" key={highlight.label}>
+            <span className="eyebrow">{highlight.label}</span>
+            <strong>{highlight.compute(filteredData)}</strong>
+            <p>Métrica calculada para este módulo.</p>
+          </div>
+        ))}
       </div>
 
-      {Array.isArray(resource.highlights) && resource.highlights.length ? (
-        <div className="panel-grid compact">
-          {resource.highlights.map((highlight) => (
-            <article className="info-panel" key={highlight.label}>
-              <span className="eyebrow">{highlight.label}</span>
-              <strong>{highlight.compute(filteredData)}</strong>
-              <p>Indicador calculado a partir do payload normalizado deste modulo.</p>
-            </article>
-          ))}
+      {error && (
+        <div className="status-badge danger" style={{ padding: '12px 20px', borderRadius: '8px', width: '100%', justifyContent: 'center' }}>
+          ⚠️ Erro na API: {error}
         </div>
-      ) : null}
+      )}
 
-      {error && <div className="callout warning">Falha ao consultar a API: {error}</div>}
-
-      <section className="table-card">
+      <div className="table-card">
         {loading ? (
-          <div className="empty-state">Carregando {resource.name.toLowerCase()}...</div>
+          <div style={{ padding: '60px', textAlign: 'center' }}>
+            <div className="spinner" style={{ border: '3px solid #f3f3f3', borderTop: '3px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+            <p style={{ color: var(--muted) }}>Carregando dados do servidor...</p>
+            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+          </div>
         ) : filteredData.length ? (
           <div className="table-scroll">
             <table>
@@ -76,7 +80,17 @@ export function CollectionPage({ resourceKey }) {
                   <tr key={row.id || `${resourceKey}-${index}`}>
                     {resource.columns.map((column) => {
                       const value = column.render ? column.render(row) : row[column.key];
-                      return <td key={column.key}>{column.kind === "status" ? <StatusBadge value={value} /> : value || "-"}</td>;
+                      return (
+                        <td key={column.key}>
+                          {column.kind === "status" ? (
+                            <StatusBadge value={value} />
+                          ) : (
+                            <span style={{ fontWeight: column.key === 'id' ? '600' : '400', color: column.key === 'id' ? 'var(--ocean)' : 'inherit' }}>
+                              {value || "-"}
+                            </span>
+                          )}
+                        </td>
+                      );
                     })}
                   </tr>
                 ))}
@@ -84,9 +98,12 @@ export function CollectionPage({ resourceKey }) {
             </table>
           </div>
         ) : (
-          <div className="empty-state">Nenhum registro disponivel para este modulo.</div>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--muted)' }}>
+            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '16px' }}>📂</span>
+            <p>Nenhum registro encontrado para este módulo.</p>
+          </div>
         )}
-      </section>
-    </section>
+      </div>
+    </div>
   );
 }
