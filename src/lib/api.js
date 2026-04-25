@@ -1,4 +1,4 @@
-export const apiUrl = (import.meta.env.VITE_API_URL || "https://limpae-jcqa.onrender.com").replace(/\/$/, "");
+export const apiUrl = (import.meta.env.VITE_API_URL || "https://limpae-adm.onrender.com").replace(/\/$/, "");
 export const apiBaseUrl = apiUrl.endsWith("/api") ? apiUrl : `${apiUrl}/api`;
 
 function buildUrl(path, useApiBase = true) {
