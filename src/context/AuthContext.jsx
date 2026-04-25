@@ -15,28 +15,30 @@ export function AuthProvider({ children }) {
     setStatus("loading");
     setError("");
 
-    // Simulação de delay para feedback visual
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const auth = await requestJson("/login", {
+        method: "POST",
+        body: JSON.stringify(credentials),
+        useApiBase: false,
+      });
 
-    // Login puramente local conforme solicitado
-    if (
-      credentials.email === "admin@limpae.com" &&
-      credentials.password === "admin123"
-    ) {
-      const genericToken = "generic-admin-token-limpae";
-      const genericRole = "admin";
+      const nextToken = auth?.token;
+      if (!nextToken) {
+        throw new Error("A API não retornou um token de acesso válido.");
+      }
 
-      setToken(genericToken);
-      setRole(genericRole);
+      const nextRole = auth?.role || "user";
+
+      setToken(nextToken);
+      setRole(nextRole);
       setStatus("authenticated");
-      localStorage.setItem(TOKEN_KEY, genericToken);
-      localStorage.setItem(ROLE_KEY, genericRole);
-      return { token: genericToken, role: genericRole };
-    } else {
+      localStorage.setItem(TOKEN_KEY, nextToken);
+      localStorage.setItem(ROLE_KEY, nextRole);
+      return { token: nextToken, role: nextRole };
+    } catch (requestError) {
       setStatus("anonymous");
-      const errorMsg = "Credenciais inválidas para o painel administrativo.";
-      setError(errorMsg);
-      throw new Error(errorMsg);
+      setError(requestError.message || "Falha ao autenticar com o servidor.");
+      throw requestError;
     }
   }
 
