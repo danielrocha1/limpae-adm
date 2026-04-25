@@ -17,10 +17,30 @@ import {
 
 export default function UserDetailPage() {
   const { id } = useParams();
-  const { data: user, isLoading } = useUser(id);
+  const { data: user, isLoading, isError } = useUser(id);
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-12 w-40" /><Skeleton className="h-[560px] w-full" /></div>;
+  }
+
+  if (isError || !user) {
+    return (
+      <div className="space-y-6">
+        <Link
+          to="/clientes"
+          className="inline-flex h-10 items-center gap-2 rounded-lg border bg-white px-3 text-sm font-semibold shadow-sm hover:bg-slate-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Link>
+        <Card className="border-0 bg-white p-8 text-center shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
+          <h1 className="text-2xl font-black">Usuário não encontrado</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A API retornou 404 para este ID e não encontramos esse usuário na listagem carregada.
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   const role = getUserRole(user);

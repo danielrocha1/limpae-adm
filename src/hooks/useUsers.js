@@ -9,10 +9,32 @@ export function useUsers() {
 }
 
 export function useUser(id) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['users', id],
-    queryFn: () => userService.getById(id),
+    queryFn: async () => {
+      const cachedUsers = queryClient.getQueryData(['users']);
+      const cachedUser = Array.isArray(cachedUsers)
+        ? cachedUsers.find((user) => String(user.ID ?? user.id) === String(id))
+        : null;
+
+      if (cachedUser) {
+        return cachedUser;
+      }
+
+      try {
+        return await userService.getById(id);
+      } catch (error) {
+        if (error?.response?.status === 404) {
+          const users = await userService.getAll();
+          const user = users.find((item) => String(item.ID ?? item.id) === String(id));
+          if (user) return user;
+        }
+        throw error;
+      }
+    },
     enabled: !!id,
+    retry: false,
   });
 }
 
