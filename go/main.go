@@ -63,6 +63,12 @@ func main() {
 
 	// Inicia o servidor e faz o bind para o host 0.0.0.0 e a porta fornecida
 	address := fmt.Sprintf("0.0.0.0:%s", port)
+
+	// Middleware para capturar rotas não encontradas (404) - deve ser o ÚLTIMO
+	app.Use(func(c *fiber.Ctx) error {
+		return c.Status(404).JSON(fiber.Map{"error": "Rota não encontrada"})
+	})
+
 	err := app.Listen(address)
 	if err != nil {
 		log.Fatalf("Erro ao iniciar o servidor: %v", err)

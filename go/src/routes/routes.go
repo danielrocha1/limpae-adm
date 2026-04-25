@@ -119,8 +119,4 @@ func SetupRoutes(app *fiber.App) {
 	admin.Get("/reviews", handlers.AdminGetReviews)
 	admin.Get("/subscriptions", handlers.AdminGetSubscriptions)
 	admin.Get("/stats", handlers.AdminGetStats)
-
-	app.Use(func(c *fiber.Ctx) error {
-		return c.Status(404).SendString("Pagina nao encontrada")
-	})
 }

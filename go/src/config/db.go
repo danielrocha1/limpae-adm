@@ -7,6 +7,8 @@ import (
 
 	"limpae/go/src/models"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -58,7 +60,32 @@ func ConnectDB() {
 		log.Fatal("Erro ao alinhar tamanho de service_type:", err)
 	}
 
+	SeedAdmin()
+
 	fmt.Println("Banco de dados conectado e migrado com sucesso!")
+}
+
+func SeedAdmin() {
+	var admin models.User
+	email := "admin@limpae.com"
+	if err := DB.Where("email = ?", email).First(&admin).Error; err != nil {
+		// Admin não existe, vamos criar
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		admin = models.User{
+			Name:         "Administrador",
+			Email:        email,
+			PasswordHash: string(hashedPassword),
+			Role:         "admin",
+			Phone:        11999999999,
+			Cpf:          "00000000000",
+			Photo:        "https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff",
+		}
+		if err := DB.Create(&admin).Error; err != nil {
+			fmt.Printf("Aviso: Não foi possível criar o usuário admin padrão: %v\n", err)
+		} else {
+			fmt.Println("Usuário admin padrão criado com sucesso (admin@limpae.com / admin123)")
+		}
+	}
 }
 
 func ensureServiceTypeColumnLength() error {
