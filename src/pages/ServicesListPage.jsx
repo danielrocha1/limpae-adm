@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Calendar, CheckCircle2, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
 import { useServices } from "../hooks/useServices";
 import Modal from "../components/Modal";
 import { Badge } from "../components/ui/Badge";
@@ -18,6 +18,8 @@ const statusConfig = {
   concluído: { className: "bg-teal-500/10 text-teal-700 dark:text-teal-300", icon: CheckCircle2 },
   cancelado: { className: "bg-rose-500/10 text-rose-700 dark:text-rose-300", icon: XCircle },
 };
+
+const pageSize = 9;
 
 function get(object, ...keys) {
   for (const key of keys) {
@@ -68,6 +70,7 @@ function serviceAddress(service) {
 export default function ServicesListPage() {
   const { data: services = [], isLoading } = useServices();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
 
   const filteredServices = useMemo(() => {
@@ -86,6 +89,13 @@ export default function ServicesListPage() {
     finished: filteredServices.filter((service) => ["concluido", "concluído"].includes(statusOf(service))).length,
     canceled: filteredServices.filter((service) => statusOf(service) === "cancelado").length,
   };
+
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / pageSize));
+  const visibleServices = filteredServices.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, totalPages));
+  }, [totalPages]);
 
   if (isLoading) {
     return (
@@ -121,13 +131,16 @@ export default function ServicesListPage() {
             className="h-11 rounded-lg pl-10"
             placeholder="Buscar por cliente, diarista, endereco ou status"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
           />
         </div>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {filteredServices.map((service) => {
+        {visibleServices.map((service) => {
           const id = get(service, "ID", "id");
           const status = statusOf(service);
           const config = statusConfig[status] || statusConfig.pendente;
@@ -172,6 +185,15 @@ export default function ServicesListPage() {
         })}
       </div>
 
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredServices.length}
+        itemLabel="serviços"
+        onPrevious={() => setPage((value) => Math.max(1, value - 1))}
+        onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
+      />
+
       {filteredServices.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
           Nenhum serviço encontrado com esses filtros.
@@ -180,6 +202,30 @@ export default function ServicesListPage() {
 
       <ServiceDetailsModal service={selectedService} onClose={() => setSelectedService(null)} />
     </div>
+  );
+}
+
+function PaginationBar({ page, totalPages, totalItems, itemLabel, onPrevious, onNext }) {
+  if (totalItems === 0) return null;
+  return (
+    <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Exibindo {totalItems} {itemLabel} filtrados
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Página anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="rounded-lg border bg-background px-3 py-2 text-sm font-semibold">
+            Página {page} de {totalPages}
+          </span>
+          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Próxima página">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 

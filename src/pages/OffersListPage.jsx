@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { CalendarClock, MapPin, Search, UserRound } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, UserRound } from "lucide-react";
 import { useOffers } from "../hooks/useOffers";
 import Modal from "../components/Modal";
 import { Badge } from "../components/ui/Badge";
@@ -37,9 +37,12 @@ function addressValue(address, key) {
   return get(address, key, key?.toLowerCase?.());
 }
 
+const pageSize = 9;
+
 export default function OffersListPage() {
   const { data: offers = [], isLoading } = useOffers();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedOffer, setSelectedOffer] = useState(null);
 
   const filteredOffers = useMemo(() => {
@@ -53,6 +56,13 @@ export default function OffersListPage() {
         })
       : [];
   }, [offers, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOffers.length / pageSize));
+  const visibleOffers = filteredOffers.slice((page - 1) * pageSize, page * pageSize);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, totalPages));
+  }, [totalPages]);
 
   if (isLoading) {
     return (
@@ -82,14 +92,17 @@ export default function OffersListPage() {
           <Input
             className="h-11 rounded-lg pl-10"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
             placeholder="Buscar por cliente, tipo de serviço ou status"
           />
         </div>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        {filteredOffers.map((offer) => {
+        {visibleOffers.map((offer) => {
           const id = get(offer, "ID", "id");
           const status = get(offer, "Status", "status") || "sem status";
           const client = get(offer, "Client", "client");
@@ -144,6 +157,15 @@ export default function OffersListPage() {
         })}
       </div>
 
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        totalItems={filteredOffers.length}
+        itemLabel="ofertas"
+        onPrevious={() => setPage((value) => Math.max(1, value - 1))}
+        onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
+      />
+
       {filteredOffers.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
           Nenhuma oferta encontrada.
@@ -152,6 +174,30 @@ export default function OffersListPage() {
 
       <OfferDetailsModal offer={selectedOffer} onClose={() => setSelectedOffer(null)} />
     </div>
+  );
+}
+
+function PaginationBar({ page, totalPages, totalItems, itemLabel, onPrevious, onNext }) {
+  if (totalItems === 0) return null;
+  return (
+    <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Exibindo {totalItems} {itemLabel} filtradas
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Página anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="rounded-lg border bg-background px-3 py-2 text-sm font-semibold">
+            Página {page} de {totalPages}
+          </span>
+          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Próxima página">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 
