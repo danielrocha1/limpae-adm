@@ -22,6 +22,8 @@ function unwrapList(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
   if (Array.isArray(payload?.users)) return payload.users;
+  if (Array.isArray(payload?.services)) return payload.services;
+  if (Array.isArray(payload?.offers)) return payload.offers;
   if (Array.isArray(payload?.items)) return payload.items;
   return [];
 }
@@ -45,6 +47,28 @@ export const userService = {
   },
   delete: async (id) => {
     await api.delete(`/users/${id}`);
+  },
+};
+
+export const serviceService = {
+  getAll: async () => {
+    const { data } = await api.get("/services");
+    return unwrapList(data);
+  },
+  getById: async (id) => {
+    const { data } = await api.get(`/services/${id}`);
+    return data?.data || data?.service || data;
+  },
+};
+
+export const offerService = {
+  getAll: async () => {
+    const { data } = await api.get("/offers");
+    return unwrapList(data);
+  },
+  getById: async (id) => {
+    const { data } = await api.get(`/offers/${id}`);
+    return data?.data || data?.offer || data;
   },
 };
 

@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
+  BriefcaseBusiness,
   Command,
+  HandCoins,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -22,6 +24,8 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, description: "Resumo geral" },
   { name: "Clientes", href: "/clientes", icon: UserRound, description: "Usuarios contratantes" },
   { name: "Diaristas", href: "/diaristas", icon: Users, description: "Profissionais" },
+  { name: "Serviços", href: "/servicos", icon: BriefcaseBusiness, description: "Agenda e execucao" },
+  { name: "Ofertas", href: "/ofertas", icon: HandCoins, description: "Mural e negociacoes" },
 ];
 
 export default function AdminLayout({ children }) {
