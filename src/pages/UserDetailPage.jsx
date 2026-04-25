@@ -36,7 +36,7 @@ export default function UserDetailPage() {
         <Card className="border-0 bg-white p-8 text-center shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
           <h1 className="text-2xl font-black">Usuário não encontrado</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            A API retornou 404 para este ID e não encontramos esse usuário na listagem carregada.
+            Não encontramos esse usuário na listagem carregada pela API.
           </p>
         </Card>
       </div>
@@ -148,7 +148,7 @@ export default function UserDetailPage() {
               <h2 className="font-bold">Origem dos dados</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Esta tela consulta GET /users/:id e renderiza os campos conhecidos pelo schema local gerado a partir da pasta go.
+              Esta tela usa a listagem GET /users para evitar a rota de detalhe que retorna 404 para admins vendo outros usuários.
             </p>
           </Card>
         </div>

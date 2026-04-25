@@ -22,16 +22,8 @@ export function useUser(id) {
         return cachedUser;
       }
 
-      try {
-        return await userService.getById(id);
-      } catch (error) {
-        if (error?.response?.status === 404) {
-          const users = await userService.getAll();
-          const user = users.find((item) => String(item.ID ?? item.id) === String(id));
-          if (user) return user;
-        }
-        throw error;
-      }
+      const users = await userService.getAll();
+      return users.find((item) => String(item.ID ?? item.id) === String(id)) || null;
     },
     enabled: !!id,
     retry: false,
