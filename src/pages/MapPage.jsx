@@ -45,30 +45,59 @@ function coordinate(address, key) {
   return Number.isFinite(value) && value !== 0 ? value : null;
 }
 
-function pinIcon(role) {
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function pinIcon(user, role) {
   const color = role === "diarista" ? "#14b8a6" : role === "cliente" ? "#38bdf8" : "#f59e0b";
+  const photo = getValue(user, "Photo");
+  const initials = getUserName(user).slice(0, 2).toUpperCase();
+  const avatar = photo
+    ? `<img src="${escapeHtml(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:999px;" />`
+    : `<span style="display:grid;place-items:center;width:100%;height:100%;font:800 15px Inter,Arial,sans-serif;color:#0f172a;background:#e2e8f0;border-radius:999px;">${escapeHtml(initials)}</span>`;
+
   return L.divIcon({
     className: "",
-    html: `<span style="
-      display:block;
-      width:18px;
-      height:18px;
-      border-radius:999px 999px 999px 3px;
-      background:${color};
-      border:3px solid white;
-      box-shadow:0 10px 24px rgba(15,23,42,.35);
-      transform:rotate(-45deg);
-    "><span style="
-      display:block;
-      width:6px;
-      height:6px;
-      margin:3px;
-      border-radius:999px;
-      background:white;
-    "></span></span>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 24],
-    popupAnchor: [0, -24],
+    html: `<div style="
+      position:relative;
+      width:54px;
+      height:62px;
+      transform:translateY(-4px);
+    ">
+      <div style="
+        position:absolute;
+        left:50%;
+        bottom:2px;
+        width:18px;
+        height:18px;
+        background:${color};
+        border:3px solid #fff;
+        border-radius:4px;
+        transform:translateX(-50%) rotate(45deg);
+        box-shadow:0 14px 28px rgba(15,23,42,.35);
+      "></div>
+      <div style="
+        position:absolute;
+        inset:0 0 auto 0;
+        width:54px;
+        height:54px;
+        overflow:hidden;
+        border-radius:999px;
+        background:#fff;
+        border:4px solid ${color};
+        box-shadow:0 16px 32px rgba(15,23,42,.35), 0 0 0 4px rgba(255,255,255,.92);
+      ">
+        ${avatar}
+      </div>
+    </div>`,
+    iconSize: [54, 62],
+    iconAnchor: [27, 62],
+    popupAnchor: [0, -58],
   });
 }
 
@@ -149,7 +178,7 @@ export default function MapPage() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {pins.map((pin) => (
-              <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={pinIcon(pin.role)}>
+              <Marker key={pin.id} position={[pin.lat, pin.lng]} icon={pinIcon(pin.user, pin.role)}>
                 <Popup>
                   <div className="min-w-[220px] space-y-2">
                     <div>
