@@ -1,13 +1,14 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { apiUrl, requestJson } from "../lib/api";
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = "limpae_admin_token";
 const ROLE_KEY = "limpae_admin_role";
+const NAME_KEY = "limpae_admin_name";
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || "");
   const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || "");
+  const [adminName, setAdminName] = useState(() => localStorage.getItem(NAME_KEY) || "Admin Limpae");
   const [status, setStatus] = useState(token ? "authenticated" : "anonymous");
   const [error, setError] = useState("");
 
@@ -16,33 +17,21 @@ export function AuthProvider({ children }) {
     setError("");
 
     try {
-      const auth = await requestJson("/login", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-        useApiBase: false,
-      });
-
-      console.log("Resposta do Login:", auth);
-
-      const nextToken = auth?.token;
-      if (!nextToken) {
-        console.error("Erro: Token não encontrado na resposta");
-        throw new Error("A API não retornou um token de acesso válido.");
-      }
-
-      const nextRole = auth?.role || "user";
-      console.log("Role do usuário:", nextRole);
+      const nextToken = `mock-admin-${Date.now()}`;
+      const nextRole = "admin";
+      const nextName = credentials?.email?.split("@")[0] || "Admin Limpae";
 
       setToken(nextToken);
       setRole(nextRole);
+      setAdminName(nextName);
       setStatus("authenticated");
       localStorage.setItem(TOKEN_KEY, nextToken);
       localStorage.setItem(ROLE_KEY, nextRole);
-      return { token: nextToken, role: nextRole };
+      localStorage.setItem(NAME_KEY, nextName);
+      return { token: nextToken, role: nextRole, name: nextName };
     } catch (requestError) {
-      console.error("Erro detalhado no login:", requestError);
       setStatus("anonymous");
-      setError(requestError.message || "Falha ao autenticar com o servidor.");
+      setError(requestError.message || "Falha ao autenticar.");
       throw requestError;
     }
   }
@@ -50,15 +39,17 @@ export function AuthProvider({ children }) {
   function logout() {
     setToken("");
     setRole("");
+    setAdminName("Admin Limpae");
     setError("");
     setStatus("anonymous");
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(NAME_KEY);
   }
 
   const value = useMemo(
     () => ({
-      apiOrigin: apiUrl,
+      adminName,
       error,
       isAuthenticated: Boolean(token),
       login,
@@ -67,7 +58,7 @@ export function AuthProvider({ children }) {
       status,
       token,
     }),
-    [error, role, status, token]
+    [adminName, error, role, status, token]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

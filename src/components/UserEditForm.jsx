@@ -1,183 +1,146 @@
-import React, { useState, useEffect } from 'react';
-import { useUpdateUser } from '../hooks/useUsers';
-import { useToast } from '../components/Toast';
-import { Camera, User, Mail, Phone, Shield, Calendar, Info } from 'lucide-react';
-import { cn } from '../lib/utils';
+import React, { useEffect, useMemo, useState } from "react";
+import { Camera, Loader2, User } from "lucide-react";
+import { useCreateUser, useUpdateUser } from "../hooks/useUsers";
+import { useToast } from "./Toast";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { editableUserFields, getUserId, getValue, roleOptions } from "../lib/schema";
 
-export default function UserEditForm({ user, onSuccess }) {
-  const { addToast } = useToast();
+function initialValue(field, user) {
+  const value = getValue(user, field.name);
+  if (value !== undefined && value !== null) return field.input === "datetime" ? String(value).slice(0, 16) : value;
+  if (field.name === "Role") return "cliente";
+  if (field.input === "checkbox") return false;
+  return "";
+}
+
+function castValue(field, value) {
+  if (field.input === "checkbox") return Boolean(value);
+  if (field.input === "number") return field.baseType === "float64" ? Number(value) : parseInt(value, 10) || 0;
+  return value;
+}
+
+export default function UserEditForm({ user, defaultRole = "cliente", onSuccess }) {
+  const fields = useMemo(() => editableUserFields(), []);
+  const [formData, setFormData] = useState({});
   const updateMutation = useUpdateUser();
-  const [formData, setFormData] = useState({
-    Name: '',
-    Email: '',
-    Phone: '',
-    Cpf: '',
-    Role: '',
-    Photo: '',
-  });
+  const createMutation = useCreateUser();
+  const { addToast } = useToast();
+  const isEditing = Boolean(user);
+  const isSaving = updateMutation.isPending || createMutation.isPending;
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        Name: user.Name || '',
-        Email: user.Email || '',
-        Phone: user.Phone?.toString() || '',
-        Cpf: user.Cpf || '',
-        Role: user.role || '',
-        Photo: user.Photo || '',
-      });
-    }
-  }, [user]);
+    const next = {};
+    fields.forEach((field) => {
+      next[field.name] = initialValue(field, user);
+    });
+    if (!user && next.Role !== undefined) next.Role = defaultRole === "todos" ? "cliente" : defaultRole;
+    setFormData(next);
+  }, [defaultRole, fields, user]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  function handleChange(field, value) {
+    setFormData((current) => ({ ...current, [field.name]: value }));
+  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  function handlePhotoFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setFormData((current) => ({ ...current, Photo: reader.result }));
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const payload = fields.reduce((acc, field) => {
+      acc[field.name] = castValue(field, formData[field.name]);
+      return acc;
+    }, {});
+
     try {
-      await updateMutation.mutateAsync({
-        id: user.ID,
-        data: {
-          ...formData,
-          Phone: parseInt(formData.Phone) || 0,
-        }
-      });
-      addToast('Usuário atualizado com sucesso!', 'success');
+      if (isEditing) {
+        await updateMutation.mutateAsync({ id: getUserId(user), data: payload });
+        addToast("Usuario atualizado com sucesso.", "success");
+      } else {
+        await createMutation.mutateAsync(payload);
+        addToast("Usuario criado com sucesso.", "success");
+      }
       onSuccess?.();
     } catch (err) {
-      addToast('Erro ao atualizar usuário.', 'error');
+      addToast(err.message || "Nao foi possivel salvar o usuario.", "error");
     }
-  };
+  }
 
   return (
-    <form id="user-edit-form" onSubmit={handleSubmit} className="space-y-8">
-      {/* Profile Photo */}
-      <div className="flex flex-col items-center space-y-4">
-        <div className="relative group">
-          <div className="w-24 h-24 rounded-full bg-secondary border-2 border-primary/20 flex items-center justify-center overflow-hidden">
-            {formData.Photo ? (
-              <img src={formData.Photo} alt={formData.Name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-10 h-10 text-muted-foreground" />
-            )}
-          </div>
-          <button 
-            type="button"
-            className="absolute bottom-0 right-0 p-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:scale-110 transition-transform"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
+    <form id="user-edit-form" onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center gap-4">
+        <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-lg border bg-secondary">
+          {formData.Photo ? <img src={formData.Photo} alt="" className="h-full w-full object-cover" /> : <User className="h-8 w-8 text-muted-foreground" />}
         </div>
-        <p className="text-xs text-muted-foreground">Clique para alterar a imagem de perfil</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" /> Nome Completo
-            </label>
-            <input
-              name="Name"
-              value={formData.Name}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary outline-none"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" /> Email
-            </label>
-            <input
-              name="Email"
-              type="email"
-              value={formData.Email}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary outline-none"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Identification */}
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Phone className="w-4 h-4 text-primary" /> Telefone
-            </label>
-            <input
-              name="Phone"
-              value={formData.Phone}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary" /> CPF
-            </label>
-            <input
-              name="Cpf"
-              value={formData.Cpf}
-              onChange={handleChange}
-              className="w-full px-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" /> Função (Role)
+        <div>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-secondary">
+            <Camera className="h-4 w-4" />
+            Upload de imagem
+            <input className="sr-only" type="file" accept="image/*" onChange={handlePhotoFile} />
           </label>
-          <select
-            name="Role"
-            value={formData.Role}
-            onChange={handleChange}
-            className="w-full px-4 py-2 rounded-lg border bg-background focus:ring-2 focus:ring-primary outline-none"
-          >
-            <option value="cliente">Cliente</option>
-            <option value="diarista">Diarista</option>
-            <option value="admin">Administrador</option>
-          </select>
+          <p className="mt-2 text-xs text-muted-foreground">A imagem e enviada como data URL no campo Photo do model User.</p>
         </div>
       </div>
 
-      {/* Stats/Info Section */}
-      <div className="p-4 bg-secondary/30 rounded-xl border border-dashed">
-        <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
-          <Info className="w-4 h-4" /> Informações do Sistema
-        </h4>
-        <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between">
-            <span>Criado em:</span>
-            <span className="font-medium text-foreground">
-              {user?.CreatedAt ? new Date(user.CreatedAt).toLocaleDateString('pt-BR') : '-'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Verificado:</span>
-            <span className={cn(
-              "font-medium",
-              user?.EmailVerified ? "text-emerald-500" : "text-amber-500"
-            )}>
-              {user?.EmailVerified ? 'Sim' : 'Não'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>ID do Usuário:</span>
-            <span className="font-mono text-foreground">#{user?.ID}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Usuário de Teste:</span>
-            <span className="font-medium text-foreground">{user?.IsTestUser ? 'Sim' : 'Não'}</span>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {fields.map((field) => {
+          if (field.name === "Photo") return null;
+          if (field.name === "Role") {
+            return (
+              <label key={field.name} className="space-y-2 text-sm font-medium">
+                <span>{field.name}</span>
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  value={formData[field.name] || ""}
+                  onChange={(event) => handleChange(field, event.target.value)}
+                >
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          }
+
+          if (field.input === "checkbox") {
+            return (
+              <label key={field.name} className="flex h-10 items-center gap-3 self-end rounded-md border px-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData[field.name])}
+                  onChange={(event) => handleChange(field, event.target.checked)}
+                />
+                {field.name}
+              </label>
+            );
+          }
+
+          return (
+            <label key={field.name} className="space-y-2 text-sm font-medium">
+              <span>{field.name}</span>
+              <Input
+                type={field.input === "number" ? "number" : field.input === "email" ? "email" : "text"}
+                value={formData[field.name] ?? ""}
+                onChange={(event) => handleChange(field, event.target.value)}
+                required={["Name", "Email", "Phone", "Cpf", "Role"].includes(field.name)}
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="submit" disabled={isSaving}>
+          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isEditing ? "Salvar alteracoes" : "Criar usuario"}
+        </Button>
       </div>
     </form>
   );

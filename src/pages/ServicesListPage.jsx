@@ -29,11 +29,14 @@ export default function ServicesListPage() {
   const { data: services = [], isLoading } = useServices();
   const [search, setSearch] = useState('');
 
-  const filteredServices = services.filter(s => 
-    s.client?.Name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.diarist?.Name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.status?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredServices = Array.isArray(services) ? services.filter(s => {
+    const clientName = s.client?.Name || '';
+    const diaristName = s.diarist?.Name || '';
+    const status = s.status || '';
+    return clientName.toLowerCase().includes(search.toLowerCase()) ||
+           diaristName.toLowerCase().includes(search.toLowerCase()) ||
+           status.toLowerCase().includes(search.toLowerCase());
+  }) : [];
 
   if (isLoading) {
     return (

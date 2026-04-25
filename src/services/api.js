@@ -1,32 +1,42 @@
-import axios from 'axios';
+import axios from "axios";
+
+const API_URL = (import.meta.env.VITE_API_URL || "https://limpae-adm.onrender.com").replace(/\/$/, "");
+const API_BASE_URL = API_URL.endsWith("/api") ? API_URL : `${API_URL}/api`;
 
 const api = axios.create({
-  baseURL: 'https://limpae-adm.onrender.com',
+  baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Interceptor para simular/injetar auth se necessário
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin-token');
+  const token = localStorage.getItem("limpae_admin_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+function unwrapList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.users)) return payload.users;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+}
+
 export const userService = {
   getAll: async () => {
-    const { data } = await api.get('/users');
-    return data;
+    const { data } = await api.get("/users");
+    return unwrapList(data);
   },
   getById: async (id) => {
     const { data } = await api.get(`/users/${id}`);
-    return data;
+    return data?.data || data?.user || data;
   },
   create: async (userData) => {
-    const { data } = await api.post('/users', userData);
+    const { data } = await api.post("/users", userData);
     return data;
   },
   update: async (id, userData) => {
@@ -35,17 +45,6 @@ export const userService = {
   },
   delete: async (id) => {
     await api.delete(`/users/${id}`);
-  },
-};
-
-export const serviceService = {
-  getAll: async () => {
-    const { data } = await api.get('/services');
-    return data;
-  },
-  getById: async (id) => {
-    const { data } = await api.get(`/services/${id}`);
-    return data;
   },
 };
 

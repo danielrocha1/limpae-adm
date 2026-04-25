@@ -26,6 +26,16 @@ export function useUpdateUser() {
   });
 }
 
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => userService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+}
+
 export function useDeleteUser() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,179 +1,156 @@
-import React, { useState } from 'react';
-import { useUsers, useDeleteUser } from '../hooks/useUsers';
-import { 
-  Search, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Filter,
-  Download,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Eye
-} from 'lucide-react';
-import { cn } from '../lib/utils';
-import Modal from '../components/Modal';
-import UserEditForm from '../components/UserEditForm';
-import { useToast } from '../components/Toast';
+import React, { useMemo, useState } from "react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useDeleteUser, useUsers } from "../hooks/useUsers";
+import Modal from "../components/Modal";
+import UserEditForm from "../components/UserEditForm";
+import { useToast } from "../components/Toast";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { Skeleton } from "../components/ui/Skeleton";
+import { formatFieldValue, getUserEmail, getUserId, getUserName, getUserRole, getValue, isUserInRole, tableUserFields } from "../lib/schema";
 
-export default function UsersListPage({ roleFilter = 'todos' }) {
-  const { data: allUsers = [], isLoading } = useUsers();
+const pageSize = 10;
+
+export default function UsersListPage({ roleFilter = "todos" }) {
+  const { data: users = [], isLoading } = useUsers();
   const deleteMutation = useDeleteUser();
   const { addToast } = useToast();
-  const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const itemsPerPage = 10;
+  const [search, setSearch] = useState("");
+  const [sortField, setSortField] = useState("Name");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [editingUser, setEditingUser] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const columns = useMemo(() => tableUserFields(), []);
 
-  const users = allUsers.filter(u => {
-    const matchesRole = roleFilter === 'todos' || u.role === roleFilter;
-    const matchesSearch = u.Name.toLowerCase().includes(search.toLowerCase()) || 
-                         u.Email.toLowerCase().includes(search.toLowerCase());
-    return matchesRole && matchesSearch;
-  });
+  const filteredUsers = useMemo(() => {
+    const term = search.toLowerCase();
+    return users
+      .filter((user) => isUserInRole(user, roleFilter))
+      .filter((user) => {
+        const haystack = [getUserName(user), getUserEmail(user), getValue(user, "Cpf"), getValue(user, "Phone")].join(" ").toLowerCase();
+        return haystack.includes(term);
+      })
+      .sort((a, b) => {
+        const left = String(getValue(a, sortField) ?? "");
+        const right = String(getValue(b, sortField) ?? "");
+        return sortDirection === "asc" ? left.localeCompare(right) : right.localeCompare(left);
+      });
+  }, [roleFilter, search, sortDirection, sortField, users]);
 
-  const totalPages = Math.ceil(users.length / itemsPerPage);
-  const currentData = users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const visibleUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+  const title = roleFilter === "cliente" ? "Clientes" : roleFilter === "diarista" ? "Diaristas" : "Usuarios";
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
-      try {
-        await deleteMutation.mutateAsync(id);
-        addToast('Usuário excluído com sucesso!', 'success');
-      } catch (err) {
-        addToast('Erro ao excluir usuário.', 'error');
-      }
+  function toggleSort(field) {
+    if (sortField === field.name) {
+      setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field.name);
+      setSortDirection("asc");
     }
-  };
+  }
 
-  const handleEdit = (user) => {
-    setSelectedUser(user);
-    setIsEditModalOpen(true);
-  };
+  async function handleDelete(user) {
+    const id = getUserId(user);
+    if (!window.confirm(`Excluir ${getUserName(user)}?`)) return;
+    try {
+      await deleteMutation.mutateAsync(id);
+      addToast("Usuario excluido com sucesso.", "success");
+    } catch (err) {
+      addToast(err.message || "Nao foi possivel excluir o usuario.", "error");
+    }
+  }
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between">
-          <div className="h-10 w-48 bg-card rounded border animate-pulse" />
-          <div className="h-10 w-32 bg-card rounded border animate-pulse" />
-        </div>
-        <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-20 border-b animate-pulse bg-secondary/10" />
-          ))}
-        </div>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-3xl font-bold capitalize">
-            {roleFilter === 'todos' ? 'Todos os Usuários' : roleFilter + 's'}
-          </h1>
-          <p className="text-muted-foreground">Gerencie os acessos e perfis da plataforma.</p>
+          <h1 className="text-3xl font-bold">{title}</h1>
+          <p className="text-muted-foreground">Tabelas, formularios e detalhes gerados a partir do model Go User.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium border hover:bg-secondary/80 transition-colors">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </button>
-          <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Usuário
-          </button>
-        </div>
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="h-4 w-4" />
+          Novo usuario
+        </Button>
       </div>
 
-      {/* Filters & Search */}
-      <div className="bg-card p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome ou email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
-          />
+      <Card className="p-4">
+        <div className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-10" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, email, CPF ou telefone" />
         </div>
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center px-3 py-2 border rounded-lg text-sm font-medium hover:bg-secondary transition-colors">
-            <Filter className="w-4 h-4 mr-2" />
-            Filtros
-          </button>
-        </div>
-      </div>
+      </Card>
 
-      {/* Table */}
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-secondary/50 border-b">
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Usuário</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documento</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Telefone</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Ações</th>
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="border-b bg-secondary/50">
+              <tr>
+                {columns.map((field) => (
+                  <th key={field.name} className="px-4 py-3 text-xs font-semibold uppercase text-muted-foreground">
+                    <button className="inline-flex items-center gap-2" onClick={() => toggleSort(field)}>
+                      {field.name}
+                      <ArrowDownUp className="h-3 w-3" />
+                    </button>
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted-foreground">Acoes</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {currentData.map((user) => (
-                <tr key={user.ID} className="hover:bg-secondary/30 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3 border border-primary/20 overflow-hidden">
-                        {user.Photo ? (
-                          <img src={user.Photo} alt={user.Name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-primary font-bold text-sm">{user.Name.substring(0, 2).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{user.Name}</p>
-                        <p className="text-xs text-muted-foreground">{user.Email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm">{user.Cpf || '-'}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm">{user.Phone || '-'}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={cn(
-                      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                      user.EmailVerified 
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" 
-                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                    )}>
-                      {user.EmailVerified ? 'Verificado' : 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleEdit(user)}
-                        className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
+              {visibleUsers.map((user) => (
+                <tr key={getUserId(user)} className="hover:bg-secondary/30">
+                  {columns.map((field) => {
+                    const value = getValue(user, field.name);
+                    if (field.name === "Name") {
+                      return (
+                        <td key={field.name} className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-md bg-primary/10 text-xs font-bold text-primary">
+                              {getValue(user, "Photo") ? <img src={getValue(user, "Photo")} alt="" className="h-full w-full object-cover" /> : getUserName(user).slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="font-medium">{getUserName(user)}</span>
+                          </div>
+                        </td>
+                      );
+                    }
+                    if (field.name === "Role") {
+                      return <td key={field.name} className="px-4 py-3"><Badge>{getUserRole(user) || "-"}</Badge></td>;
+                    }
+                    if (field.name === "EmailVerified") {
+                      return <td key={field.name} className="px-4 py-3"><Badge variant={value ? "success" : "warning"}>{value ? "Verificado" : "Pendente"}</Badge></td>;
+                    }
+                    return <td key={field.name} className="px-4 py-3 text-muted-foreground">{formatFieldValue(value, field)}</td>;
+                  })}
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <Link
+                        to={`/usuarios/${getUserId(user)}`}
+                        title="Ver detalhes"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
                       >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(user.ID)}
-                        className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-secondary text-muted-foreground rounded-lg transition-colors">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <Button variant="ghost" size="icon" title="Editar" onClick={() => setEditingUser(user)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Excluir" className="text-destructive" onClick={() => handleDelete(user)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -182,58 +159,25 @@ export default function UsersListPage({ roleFilter = 'todos' }) {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="px-6 py-4 bg-secondary/20 border-t flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Mostrando <span className="font-medium text-foreground">{(currentPage - 1) * itemsPerPage + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, users.length)}</span> de <span className="font-medium text-foreground">{users.length}</span> resultados
-          </p>
+        <div className="flex flex-col gap-3 border-t p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">{filteredUsers.length} resultados encontrados</p>
           <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 border rounded-lg disabled:opacity-50 hover:bg-secondary transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-medium px-4">{currentPage} de {totalPages || 1}</span>
-            <button 
-              disabled={currentPage === totalPages || totalPages === 0}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 border rounded-lg disabled:opacity-50 hover:bg-secondary transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <Button variant="outline" size="icon" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm">Pagina {page} de {totalPages}</span>
+            <Button variant="outline" size="icon" disabled={page === totalPages} onClick={() => setPage((value) => value + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Editar Perfil de Usuário"
-        footer={
-          <>
-            <button 
-              onClick={() => setIsEditModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium hover:underline"
-            >
-              Cancelar
-            </button>
-            <button 
-              form="user-edit-form"
-              type="submit"
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg"
-            >
-              Salvar Alterações
-            </button>
-          </>
-        }
-      >
-        <UserEditForm 
-          user={selectedUser} 
-          onSuccess={() => setIsEditModalOpen(false)} 
-        />
+      <Modal isOpen={Boolean(editingUser)} onClose={() => setEditingUser(null)} title="Editar usuario">
+        <UserEditForm user={editingUser} defaultRole={roleFilter} onSuccess={() => setEditingUser(null)} />
+      </Modal>
+      <Modal isOpen={creating} onClose={() => setCreating(false)} title="Novo usuario">
+        <UserEditForm defaultRole={roleFilter} onSuccess={() => setCreating(false)} />
       </Modal>
     </div>
   );
