@@ -14,11 +14,7 @@ import (
 func init() {
 	err := godotenv.Load("./src/config/.env")
 	if err != nil {
-		if runningUnderGoTest() {
-			log.Println("Aviso ao carregar o .env:", err)
-			return
-		}
-		log.Fatal("Erro ao carregar o .env:", err)
+		log.Println("Aviso: Arquivo .env não encontrado, usando variáveis de ambiente do sistema")
 	}
 }
 

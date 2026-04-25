@@ -17,7 +17,7 @@ var DB *gorm.DB
 func ConnectDB() {
 	err := godotenv.Load("./src/config/.env")
 	if err != nil {
-		log.Fatal("Erro ao carregar o .env:", err)
+		log.Println("Aviso: Arquivo .env não encontrado em ConnectDB")
 	}
 
 	databaseURL := os.Getenv("DATABASE_URL")
