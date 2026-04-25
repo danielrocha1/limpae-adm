@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -33,10 +34,12 @@ func LoginHandler(c *fiber.Ctx) error {
 
 	var user models.User
 	if err := config.DB.Where("email = ?", strings.ToLower(strings.TrimSpace(request.Email))).First(&user).Error; err != nil {
+		fmt.Printf("Login falhou: usuário não encontrado (%s)\n", request.Email)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(request.Password)); err != nil {
+		fmt.Printf("Login falhou: senha incorreta para (%s)\n", request.Email)
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
