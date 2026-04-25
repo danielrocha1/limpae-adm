@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowUpRight, CheckCircle2, Clock, MailCheck, ShieldCheck, UserRound, Users } from "lucide-react";
+import { ArrowUpRight, MailCheck, ShieldCheck, UserRound, Users } from "lucide-react";
 import { useUsers } from "../hooks/useUsers";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         })}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+      <section>
         <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
           <div className="flex items-center justify-between border-b p-5">
             <div>
@@ -123,36 +123,6 @@ export default function DashboardPage() {
                 </Badge>
               </div>
             ))}
-          </div>
-        </Card>
-
-        <Card className="border-0 bg-white shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
-          <div className="border-b p-5">
-            <h2 className="text-lg font-bold">Integracao</h2>
-            <p className="text-sm text-muted-foreground">Estado do painel gerado</p>
-          </div>
-          <div className="space-y-4 p-5 text-sm">
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3 dark:bg-white/[0.05]">
-              <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500" /> REST /users</span>
-              <span className="font-semibold">ativo</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 p-3 dark:bg-white/[0.05]">
-              <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-sky-500" /> Schema Go</span>
-              <span className="font-semibold">build-time</span>
-            </div>
-            <div className="rounded-lg border p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Distribuicao</p>
-              <div className="mt-4 space-y-3">
-                <div>
-                  <div className="mb-1 flex justify-between text-xs"><span>Clientes</span><span>{percent(clients, total)}%</span></div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-sky-500" style={{ width: `${percent(clients, total)}%` }} /></div>
-                </div>
-                <div>
-                  <div className="mb-1 flex justify-between text-xs"><span>Diaristas</span><span>{percent(diarists, total)}%</span></div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-teal-500" style={{ width: `${percent(diarists, total)}%` }} /></div>
-                </div>
-              </div>
-            </div>
           </div>
         </Card>
       </section>
