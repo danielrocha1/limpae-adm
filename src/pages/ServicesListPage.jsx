@@ -226,10 +226,10 @@ function ServiceDetailsModal({ service, onClose }) {
       <div className="space-y-6">
         <Section title="Resumo do serviço">
           <div className="grid gap-3 md:grid-cols-4">
-            <Detail label="ID" value={get(service, "ID", "id")} />
-            <Detail label="Status" value={status} />
-            <Detail label="Valor total" value={money(get(service, "TotalPrice", "total_price"))} />
-            <Detail label="Duração" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} />
+            <Detail label="ID do serviço" value={get(service, "ID", "id")} tone="slate" />
+            <Detail label="Status" value={status} tone="amber" />
+            <Detail label="Valor total" value={money(get(service, "TotalPrice", "total_price"))} tone="teal" />
+            <Detail label="Duração" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} tone="sky" />
             <Detail label="Tipo" value={get(service, "ServiceType", "service_type")} className="md:col-span-2" />
             <Detail label="Agendado para" value={dateTime(get(service, "ScheduledAt", "scheduled_at"))} />
             <Detail label="Concluído em" value={dateTime(get(service, "CompletedAt", "completed_at"))} />
@@ -237,15 +237,6 @@ function ServiceDetailsModal({ service, onClose }) {
             <Detail label="Tem pets" value={yesNo(get(service, "HasPets", "has_pets"))} />
             <Detail label="Quartos" value={get(service, "RoomCount", "room_count")} />
             <Detail label="Banheiros" value={get(service, "BathroomCount", "bathroom_count")} />
-          </div>
-        </Section>
-
-        <Section title="IDs e vínculos">
-          <div className="grid gap-3 md:grid-cols-4">
-            <Detail label="OfferID" value={get(service, "OfferID", "offer_id")} />
-            <Detail label="ClientID" value={get(service, "ClientID", "client_id")} />
-            <Detail label="DiaristID" value={get(service, "DiaristID", "diarist_id")} />
-            <Detail label="AddressID" value={get(service, "AddressID", "address_id")} />
           </div>
         </Section>
 
@@ -375,10 +366,17 @@ function EmptyState({ text }) {
   return <div className="rounded-lg border border-dashed bg-slate-50 p-4 text-sm text-muted-foreground dark:bg-white/[0.04]">{text}</div>;
 }
 
-function Detail({ label, value, className = "" }) {
+function Detail({ label, value, className = "", tone = "default" }) {
+  const tones = {
+    default: "bg-slate-50 dark:bg-white/[0.04]",
+    slate: "bg-slate-100 text-slate-950 dark:bg-white/10 dark:text-white",
+    teal: "bg-teal-50 text-teal-950 ring-1 ring-teal-200/60 dark:bg-teal-500/10 dark:text-teal-100 dark:ring-teal-500/20",
+    sky: "bg-sky-50 text-sky-950 ring-1 ring-sky-200/60 dark:bg-sky-500/10 dark:text-sky-100 dark:ring-sky-500/20",
+    amber: "bg-amber-50 text-amber-950 ring-1 ring-amber-200/60 dark:bg-amber-500/10 dark:text-amber-100 dark:ring-amber-500/20",
+  };
   return (
-    <div className={`rounded-lg border bg-slate-50 p-4 dark:bg-white/[0.04] ${className}`}>
-      <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className={`rounded-lg border p-4 ${tones[tone]} ${className}`}>
+      <p className="text-xs font-black uppercase tracking-wide opacity-65">{label}</p>
       <p className="mt-2 break-words text-sm font-semibold">{value === undefined || value === null || value === "" ? "-" : value}</p>
     </div>
   );
