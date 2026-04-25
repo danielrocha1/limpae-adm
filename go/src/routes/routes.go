@@ -9,6 +9,14 @@ import (
 )
 
 func SetupRoutes(app *fiber.App) {
+	// Rotas Públicas (sem JWT)
+	public := app.Group("/api")
+	public.Post("/register", handlers.CreateUser)
+	public.Post("/login", handlers.LoginHandler)
+	public.Get("/verify-email", handlers.VerifyEmailHandler)
+	public.Post("/verify-email", handlers.VerifyEmailHandler)
+
+	// Rotas Protegidas (com JWT)
 	api := app.Group("/api", config.JWTMiddleware)
 
 	app.Use("/api/ws/offers", handlers.OfferWebSocketUpgradeMiddleware)
@@ -17,12 +25,6 @@ func SetupRoutes(app *fiber.App) {
 	app.Get("/api/ws/chat", handlers.ChatWebSocketHandler())
 	app.Post("/stripe/webhook", handlers.StripeWebhookHandler)
 	app.Post("/paymentstripe", handlers.PaymentStripeWebhookHandler)
-
-	app.Post("/register", handlers.CreateUser)
-	app.Post("/users", handlers.CreateUser)
-	app.Post("/login", handlers.LoginHandler)
-	app.Get("/verify-email", handlers.VerifyEmailHandler)
-	app.Post("/verify-email", handlers.VerifyEmailHandler)
 
 	api.Get("/users", handlers.GetUsers)
 	api.Get("/users/:id", handlers.GetUser)

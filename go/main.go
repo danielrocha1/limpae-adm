@@ -66,7 +66,11 @@ func main() {
 
 	// Middleware para capturar rotas não encontradas (404) - deve ser o ÚLTIMO
 	app.Use(func(c *fiber.Ctx) error {
-		return c.Status(404).JSON(fiber.Map{"error": "Rota não encontrada"})
+		fmt.Printf("404: Rota não encontrada: %s %s\n", c.Method(), c.Path())
+		return c.Status(404).JSON(fiber.Map{
+			"error": "Rota não encontrada no servidor backend",
+			"path":  c.Path(),
+		})
 	})
 
 	err := app.Listen(address)

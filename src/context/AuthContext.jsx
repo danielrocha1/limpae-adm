@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
       const auth = await requestJson("/login", {
         method: "POST",
         body: JSON.stringify(credentials),
-        useApiBase: false,
+        useApiBase: true,
       });
 
       const nextToken = auth?.token;
