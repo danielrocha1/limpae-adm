@@ -31,29 +31,22 @@ export function useAdminData(resourceKey) {
         ? resource.transform(hydratedPayload)
         : normalizeArray(hydratedPayload);
 
-      if (resourceKey === "users" || resourceKey === "diarists") {
-        console.log(`[limpae-admin] raw ${resourceKey} payload`, payload);
-        console.log(`[limpae-admin] hydrated ${resourceKey} payload`, hydratedPayload);
-        console.log(`[limpae-admin] normalized ${resourceKey} items`, items);
-      }
+      console.log(`[limpae-admin] Real data loaded for ${resourceKey}:`, items.length, "items");
 
       setData(items);
       setMeta({ source: "api", count: items.length });
     } catch (requestError) {
+      console.error(`[limpae-admin] Failed to fetch ${resourceKey}:`, requestError);
+      
       if (String(requestError.message).toLowerCase().includes("token")) {
         logout();
         return;
       }
 
-      const fallback = mockCollections[resourceKey] || [];
-      setData(fallback);
-      setMeta({ source: "mock", count: fallback.length });
-      setError(requestError.message || "Falha ao buscar dados.");
-
-      if (resourceKey === "users" || resourceKey === "diarists") {
-        console.log(`[limpae-admin] fallback ${resourceKey} items`, fallback);
-        console.error(`[limpae-admin] ${resourceKey} fetch error`, requestError);
-      }
+      // No fallback to mock data anymore to be transparent
+      setData([]);
+      setMeta({ source: "error", count: 0 });
+      setError(requestError.message || "Falha ao buscar dados do servidor.");
     } finally {
       setLoading(false);
     }
