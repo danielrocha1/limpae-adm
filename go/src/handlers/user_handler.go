@@ -230,6 +230,25 @@ func GetUsers(c *fiber.Ctx) error {
 		return err
 	}
 
+	userRole := c.Locals("role").(string)
+
+	// Se for admin, retorna todos os usuários
+	if userRole == "admin" {
+		var users []models.User
+		if err := config.DB.Preload("UserProfile").Preload("DiaristProfile").Preload("Address").Find(&users).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar usuários"})
+		}
+
+		response := make([]UserResponseDTO, 0, len(users))
+		for _, u := range users {
+			if err := resolveUserPhoto(&u); err == nil {
+				response = append(response, toUserResponseDTO(u))
+			}
+		}
+		return c.JSON(response)
+	}
+
+	// Caso contrário, mantém o comportamento original de retornar apenas o próprio usuário
 	user, err := findScopedUser(userID, userID)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Usuário não encontrado"})

@@ -111,12 +111,8 @@ func SetupRoutes(app *fiber.App) {
 		return handlers.GetNearbyDiarists(c)
 	})
 
-	// Rotas Administrativas (Protegidas por JWT e AdminMiddleware)
-	api.Get("/admin/users", config.AdminMiddleware, handlers.AdminGetUsers)
-	api.Get("/admin/services", config.AdminMiddleware, handlers.AdminGetServices)
-	api.Get("/admin/payments", config.AdminMiddleware, handlers.AdminGetPayments)
-	api.Get("/admin/offers", config.AdminMiddleware, handlers.AdminGetOffers)
-	api.Get("/admin/reviews", config.AdminMiddleware, handlers.AdminGetReviews)
-	api.Get("/admin/subscriptions", config.AdminMiddleware, handlers.AdminGetSubscriptions)
-	api.Get("/admin/stats", config.AdminMiddleware, handlers.AdminGetStats)
+	// Rotas de Reviews (Acesso Público ou Protegido conforme necessidade)
+	api.Get("/reviews", handlers.GetReviews)
+
+	// Rotas Administrativas (Removidas conforme solicitação para usar endpoints originais)
 }

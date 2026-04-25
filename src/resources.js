@@ -20,9 +20,9 @@ export const auditFindings = [
     detail: "Novo papel 'admin' adicionado ao banco e middleware de autorização protegendo rotas críticas no backend Go.",
   },
   {
-    title: "Endpoints Administrativos Dedicados",
+    title: "Acesso Administrativo Unificado",
     severity: "sucesso",
-    detail: "Migração completa para /api/admin/* com pre-load de dados (GORM Preload) para usuários, serviços e pagamentos.",
+    detail: "O painel agora consome os endpoints originais da API. O backend identifica o papel 'admin' e remove os filtros de ID, permitindo a visão global sem criar rotas redundantes.",
   },
   {
     title: "Gestão de Dependências Go",
@@ -42,7 +42,7 @@ export const resourceConfigs = [
     path: "usuarios",
     name: "Usuarios",
     headline: "Base cadastral completa da plataforma",
-    endpoint: "/admin/users",
+    endpoint: "/users",
     transform: normalizeUsers,
     columns: [
       { key: "id", label: "ID" },
@@ -64,7 +64,7 @@ export const resourceConfigs = [
     path: "diaristas",
     name: "Diaristas",
     headline: "Recorte operacional dos profissionais da rede",
-    endpoint: "/admin/users",
+    endpoint: "/users",
     transform: (payload) => {
       const items = normalizeUsers(payload);
       return items.filter((user) => user.role === "diarista");
@@ -90,7 +90,7 @@ export const resourceConfigs = [
     path: "servicos",
     name: "Servicos",
     headline: "Agenda, execucao e historico de atendimento",
-    endpoint: "/admin/services",
+    endpoint: "/services",
     transform: normalizeServices,
     columns: [
       { key: "id", label: "ID" },
@@ -113,7 +113,7 @@ export const resourceConfigs = [
     path: "ofertas",
     name: "Ofertas",
     headline: "Mural, negociacoes e aceite",
-    endpoint: "/admin/offers",
+    endpoint: "/offers",
     transform: normalizeOffers,
     columns: [
       { key: "id", label: "ID" },
@@ -136,7 +136,7 @@ export const resourceConfigs = [
     path: "pagamentos",
     name: "Pagamentos",
     headline: "Fluxo financeiro por servico",
-    endpoint: "/admin/payments",
+    endpoint: "/payments",
     transform: normalizePayments,
     columns: [
       { key: "id", label: "ID" },
@@ -159,7 +159,8 @@ export const resourceConfigs = [
     path: "reviews",
     name: "Reviews",
     headline: "Qualidade, reputacao e reciprocidade",
-    endpoint: "/admin/reviews",
+    endpoint: "/reviews",
+    useApiBase: false,
     transform: normalizeReviews,
     columns: [
       { key: "id", label: "ID" },
@@ -181,7 +182,7 @@ export const resourceConfigs = [
     path: "assinaturas",
     name: "Assinaturas",
     headline: "Planos, expiracao e recorrencia",
-    endpoint: "/admin/subscriptions",
+    endpoint: "/subscriptions",
     transform: normalizeSubscriptions,
     columns: [
       { key: "id", label: "ID" },
@@ -196,11 +197,6 @@ export const resourceConfigs = [
       { label: "MRR visivel", compute: (rows) => formatCurrency(rows.filter((row) => row.status === "active").reduce((sum, row) => sum + Number(row.price || 0), 0)) },
       { label: "Premium", compute: (rows) => rows.filter((row) => row.plan === "premium").length },
     ],
-  },
-  {
-    key: "stats",
-    endpoint: "/admin/stats",
-    transform: (payload) => payload,
   },
 ];
 

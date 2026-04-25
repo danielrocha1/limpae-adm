@@ -100,7 +100,7 @@ func CreateReview(c *fiber.Ctx) error {
 
 func GetReviews(c *fiber.Ctx) error {
 	var reviews []models.Review
-	config.DB.Find(&reviews)
+	config.DB.Preload("Service").Preload("Client").Preload("Diarist").Find(&reviews)
 
 	response := make([]ReviewResponseDTO, 0, len(reviews))
 	for _, review := range reviews {

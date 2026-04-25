@@ -4,14 +4,15 @@ import { averageBy, formatCurrency, sumBy } from "../lib/formatters";
 import { auditFindings } from "../resources";
 
 export function DashboardPage() {
-  const stats = useAdminData("stats");
+  const users = useAdminData("users");
+  const services = useAdminData("services");
   const reviews = useAdminData("reviews");
 
-  const dashboardStats = stats.data || {
-    users: 0,
-    services: 0,
-    total_revenue: 0,
-    diarists: 0,
+  const dashboardStats = {
+    users: users.data.length,
+    services: services.data.length,
+    total_revenue: services.data.reduce((sum, s) => sum + Number(s.total_price || 0), 0),
+    diarists: users.data.filter(u => u.role === "diarista").length,
   };
 
   const reviewItems = reviews.data.map((review) => ({
@@ -36,8 +37,8 @@ export function DashboardPage() {
           <span className="eyebrow">Resumo da stack</span>
           <h3>React admin sobre um backend Fiber + GORM com PostgreSQL</h3>
           <p>
-            O painel consome endpoints administrativos dedicados (/api/admin/*) com 
-            controle de acesso RBAC e pre-load de dados otimizado.
+            O painel consome os endpoints originais da API com 
+            controle de acesso administrativo e pre-load de dados.
           </p>
         </div>
         <div className="hero-tags">

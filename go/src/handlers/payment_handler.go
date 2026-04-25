@@ -60,8 +60,19 @@ func GetPayments(c *fiber.Ctx) error {
 		return err
 	}
 
+	userRole := c.Locals("role").(string)
+
 	var payments []models.Payment
-	config.DB.Where("client_id = ? OR diarist_id = ?", userID, userID).Find(&payments)
+	query := config.DB.Model(&models.Payment{})
+
+	// Se for admin, não filtra por ID
+	if userRole != "admin" {
+		query = query.Where("client_id = ? OR diarist_id = ?", userID, userID)
+	}
+
+	if err := query.Find(&payments).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar pagamentos"})
+	}
 
 	response := make([]PaymentResponseDTO, 0, len(payments))
 	for _, payment := range payments {

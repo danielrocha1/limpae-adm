@@ -599,8 +599,19 @@ func GetSubscriptions(c *fiber.Ctx) error {
 		return err
 	}
 
+	userRole := c.Locals("role").(string)
+
 	var subs []models.Subscription
-	config.DB.Where("user_id = ?", userID).Find(&subs)
+	query := config.DB.Model(&models.Subscription{})
+
+	// Se for admin, não filtra por ID
+	if userRole != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	if err := query.Find(&subs).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar assinaturas"})
+	}
 
 	response := make([]SubscriptionResponseDTO, 0, len(subs))
 	for _, sub := range subs {

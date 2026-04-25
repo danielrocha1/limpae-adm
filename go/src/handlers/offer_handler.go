@@ -358,6 +358,18 @@ func GetOpenOffers(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+
+	userRole := c.Locals("role").(string)
+
+	// Se for admin, retorna todas as ofertas de forma simplificada para o painel
+	if userRole == "admin" {
+		var offers []models.Offer
+		if err := config.DB.Preload("Client").Preload("Address").Find(&offers).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar ofertas"})
+		}
+		return c.JSON(offers)
+	}
+
 	if err := requireUserRole(userID, "diarista"); err != nil {
 		return c.Status(403).JSON(fiber.Map{"error": "Sem permissao para listar ofertas"})
 	}

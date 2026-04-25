@@ -118,14 +118,24 @@ func GetServices(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+
+	userRole := c.Locals("role").(string)
+
 	var services []models.Service
-	config.DB.
+	query := config.DB.
 		Preload("Address").
 		Preload("Address.Rooms").
 		Preload("Client").
-		Preload("Diarist").
-		Where("client_id = ? OR diarist_id = ?", userID, userID).
-		Find(&services)
+		Preload("Diarist")
+
+	// Se for admin, não filtra por ID
+	if userRole != "admin" {
+		query = query.Where("client_id = ? OR diarist_id = ?", userID, userID)
+	}
+
+	if err := query.Find(&services).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar serviços"})
+	}
 
 	for index := range services {
 		if err := resolveServicePhotos(&services[index]); err != nil {
