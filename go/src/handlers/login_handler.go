@@ -43,10 +43,19 @@ func LoginHandler(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
 	}
 
+	fmt.Printf("Login bem-sucedido: Usuário=%s, Role=%s\n", user.Email, user.Role)
+
+	// Debug: Forçar role admin no token se for o e-mail do dono
+	effectiveRole := user.Role
+	if strings.ToLower(user.Email) == "daniel.rochats@gmail.com" {
+		effectiveRole = "admin"
+		fmt.Println("Debug: Forçando role 'admin' para daniel.rochats@gmail.com")
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":        user.ID,
 		"email":          user.Email,
-		"role":           user.Role,
+		"role":           effectiveRole,
 		"email_verified": user.EmailVerified,
 		"exp":            time.Now().Add(24 * time.Hour).Unix(),
 	})
@@ -71,6 +80,6 @@ func LoginHandler(c *fiber.Ctx) error {
 		"token":          tokenString,
 		"email_verified": user.EmailVerified,
 		"user_id":        user.ID,
-		"role":           user.Role,
+		"role":           effectiveRole,
 	})
 }
