@@ -120,9 +120,12 @@ func GetServices(c *fiber.Ctx) error {
 	}
 
 	userRole := c.Locals("role").(string)
+	page, pageSize, _ := getPaginationParams(c)
+	search := strings.ToLower(strings.TrimSpace(c.Query("search")))
 
 	var services []models.Service
 	query := config.DB.
+		Model(&models.Service{}).
 		Preload("Address").
 		Preload("Address.Rooms").
 		Preload("Client").
@@ -133,7 +136,40 @@ func GetServices(c *fiber.Ctx) error {
 		query = query.Where("client_id = ? OR diarist_id = ?", userID, userID)
 	}
 
-	if err := query.Find(&services).Error; err != nil {
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.
+			Joins("LEFT JOIN users service_clients ON service_clients.id = services.client_id").
+			Joins("LEFT JOIN users service_diarists ON service_diarists.id = services.diarist_id").
+			Joins("LEFT JOIN addresses service_addresses ON service_addresses.id = services.address_id").
+			Where(`
+				LOWER(service_clients.name) LIKE ? OR
+				LOWER(service_clients.email) LIKE ? OR
+				LOWER(service_diarists.name) LIKE ? OR
+				LOWER(service_diarists.email) LIKE ? OR
+				LOWER(services.status) LIKE ? OR
+				LOWER(services.service_type) LIKE ? OR
+				LOWER(service_addresses.street) LIKE ? OR
+				LOWER(service_addresses.neighborhood) LIKE ? OR
+				LOWER(service_addresses.city) LIKE ?
+			`, like, like, like, like, like, like, like, like, like)
+	}
+
+	var totalItems int64
+	if err := query.Count(&totalItems).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Erro ao contar serviços"})
+	}
+
+	totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	offset := (page - 1) * pageSize
+
+	if err := query.Order("scheduled_at DESC").Offset(offset).Limit(pageSize).Find(&services).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar serviços"})
 	}
 
@@ -147,7 +183,11 @@ func GetServices(c *fiber.Ctx) error {
 	for _, serviceModel := range services {
 		response = append(response, toServiceResponseDTO(serviceModel, userID))
 	}
-	return c.JSON(response)
+	return c.JSON(fiber.Map{
+		"data":       response,
+		"services":   response,
+		"pagination": buildPaginationPayload(page, pageSize, totalItems),
+	})
 }
 
 func GetPendingSchedules(c *fiber.Ctx) error {

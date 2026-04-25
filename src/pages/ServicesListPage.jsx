@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
 import { useServices } from "../hooks/useServices";
 import Modal from "../components/Modal";
@@ -68,34 +68,31 @@ function serviceAddress(service) {
 }
 
 export default function ServicesListPage() {
-  const { data: services = [], isLoading } = useServices();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
-
-  const filteredServices = useMemo(() => {
-    const term = search.toLowerCase();
-    return Array.isArray(services)
-      ? services.filter((service) => {
-          const clientName = getNested(service, "Client", "Name") || getNested(service, "client", "Name") || "";
-          const diaristName = getNested(service, "Diarist", "Name") || getNested(service, "diarist", "Name") || "";
-          return [clientName, diaristName, statusOf(service), serviceAddress(service)].join(" ").toLowerCase().includes(term);
-        })
-      : [];
-  }, [services, search]);
+  const { data: servicePage, isLoading } = useServices({
+    page,
+    page_size: pageSize,
+    search: search.trim() || undefined,
+  });
+  const services = servicePage?.items || [];
+  const pagination = servicePage?.pagination;
 
   const totals = {
-    all: Array.isArray(services) ? services.length : 0,
-    finished: filteredServices.filter((service) => ["concluido", "concluído"].includes(statusOf(service))).length,
-    canceled: filteredServices.filter((service) => statusOf(service) === "cancelado").length,
+    all: pagination?.total_items ?? services.length,
+    finished: services.filter((service) => ["concluido", "concluído", "concluÃ­do"].includes(statusOf(service))).length,
+    canceled: services.filter((service) => statusOf(service) === "cancelado").length,
   };
 
-  const totalPages = Math.max(1, Math.ceil(filteredServices.length / pageSize));
-  const visibleServices = filteredServices.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(services.length / pageSize));
+  const visibleServices = services;
 
   useEffect(() => {
-    setPage((currentPage) => Math.min(currentPage, totalPages));
-  }, [totalPages]);
+    if (pagination?.page && pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination?.page]);
 
   if (isLoading) {
     return (
@@ -188,13 +185,13 @@ export default function ServicesListPage() {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        totalItems={filteredServices.length}
+        totalItems={pagination?.total_items ?? services.length}
         itemLabel="serviços"
         onPrevious={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
       />
 
-      {filteredServices.length === 0 && (
+      {services.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
           Nenhum serviço encontrado com esses filtros.
         </div>

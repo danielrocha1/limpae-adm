@@ -28,6 +28,13 @@ function unwrapList(payload) {
   return [];
 }
 
+function unwrapPaginated(payload) {
+  return {
+    items: unwrapList(payload),
+    pagination: payload?.pagination || null,
+  };
+}
+
 export const userService = {
   getAll: async () => {
     const { data } = await api.get("/users");
@@ -55,6 +62,10 @@ export const serviceService = {
     const { data } = await api.get("/services");
     return unwrapList(data);
   },
+  getPage: async (params = {}) => {
+    const { data } = await api.get("/services", { params });
+    return unwrapPaginated(data);
+  },
   getById: async (id) => {
     const { data } = await api.get(`/services/${id}`);
     return data?.data || data?.service || data;
@@ -65,6 +76,10 @@ export const offerService = {
   getAll: async () => {
     const { data } = await api.get("/offers");
     return unwrapList(data);
+  },
+  getPage: async (params = {}) => {
+    const { data } = await api.get("/offers", { params });
+    return unwrapPaginated(data);
   },
   getById: async (id) => {
     const { data } = await api.get(`/offers/${id}`);

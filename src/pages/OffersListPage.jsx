@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, UserRound } from "lucide-react";
 import { useOffers } from "../hooks/useOffers";
 import Modal from "../components/Modal";
@@ -40,29 +40,24 @@ function addressValue(address, key) {
 const pageSize = 9;
 
 export default function OffersListPage() {
-  const { data: offers = [], isLoading } = useOffers();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedOffer, setSelectedOffer] = useState(null);
-
-  const filteredOffers = useMemo(() => {
-    const term = search.toLowerCase();
-    return Array.isArray(offers)
-      ? offers.filter((offer) => {
-          const clientName = get(offer, "Client", "client")?.Name || get(offer, "Client", "client")?.name || "";
-          const serviceType = get(offer, "ServiceType", "service_type") || "";
-          const status = get(offer, "Status", "status") || "";
-          return [clientName, serviceType, status].join(" ").toLowerCase().includes(term);
-        })
-      : [];
-  }, [offers, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredOffers.length / pageSize));
-  const visibleOffers = filteredOffers.slice((page - 1) * pageSize, page * pageSize);
+  const { data: offerPage, isLoading } = useOffers({
+    page,
+    page_size: pageSize,
+    search: search.trim() || undefined,
+  });
+  const offers = offerPage?.items || [];
+  const pagination = offerPage?.pagination;
+  const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(offers.length / pageSize));
+  const visibleOffers = offers;
 
   useEffect(() => {
-    setPage((currentPage) => Math.min(currentPage, totalPages));
-  }, [totalPages]);
+    if (pagination?.page && pagination.page !== page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination?.page]);
 
   if (isLoading) {
     return (
@@ -160,13 +155,13 @@ export default function OffersListPage() {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        totalItems={filteredOffers.length}
+        totalItems={pagination?.total_items ?? offers.length}
         itemLabel="ofertas"
         onPrevious={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
       />
 
-      {filteredOffers.length === 0 && (
+      {offers.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
           Nenhuma oferta encontrada.
         </div>

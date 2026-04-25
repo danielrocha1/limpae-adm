@@ -254,7 +254,7 @@ func getPaginationParams(c *fiber.Ctx) (int, int, int) {
 		page = 1
 	}
 
-	pageSize, err := strconv.Atoi(c.Query("page_size", "6"))
+	pageSize, err := strconv.Atoi(c.Query("page_size", c.Query("limit", "6")))
 	if err != nil || pageSize < 1 {
 		pageSize = 6
 	}
@@ -363,11 +363,56 @@ func GetOpenOffers(c *fiber.Ctx) error {
 
 	// Se for admin, retorna todas as ofertas
 	if userRole == "admin" {
+		page, pageSize, _ := getPaginationParams(c)
+		search := strings.ToLower(strings.TrimSpace(c.Query("search")))
 		var offers []models.Offer
-		if err := config.DB.Preload("Client").Preload("Address").Find(&offers).Error; err != nil {
+		query := config.DB.
+			Model(&models.Offer{}).
+			Preload("Client").
+			Preload("Address").
+			Preload("Address.Rooms").
+			Preload("AcceptedByDiarist").
+			Preload("Negotiations").
+			Preload("Negotiations.Diarist")
+
+		if search != "" {
+			like := "%" + search + "%"
+			query = query.
+				Joins("LEFT JOIN users offer_clients ON offer_clients.id = offers.client_id").
+				Joins("LEFT JOIN addresses offer_addresses ON offer_addresses.id = offers.address_id").
+				Where(`
+					LOWER(offer_clients.name) LIKE ? OR
+					LOWER(offer_clients.email) LIKE ? OR
+					LOWER(offers.status) LIKE ? OR
+					LOWER(offers.service_type) LIKE ? OR
+					LOWER(offer_addresses.street) LIKE ? OR
+					LOWER(offer_addresses.neighborhood) LIKE ? OR
+					LOWER(offer_addresses.city) LIKE ?
+				`, like, like, like, like, like, like, like)
+		}
+
+		var totalItems int64
+		if err := query.Count(&totalItems).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Erro ao contar ofertas"})
+		}
+
+		totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
+		if totalPages == 0 {
+			totalPages = 1
+		}
+		if page > totalPages {
+			page = totalPages
+		}
+		offset := (page - 1) * pageSize
+
+		if err := query.Order("offers.scheduled_at DESC").Offset(offset).Limit(pageSize).Find(&offers).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Erro ao buscar ofertas"})
 		}
-		return c.JSON(offers)
+		return c.JSON(fiber.Map{
+			"data":       offers,
+			"offers":     offers,
+			"pagination": buildPaginationPayload(page, pageSize, totalItems),
+		})
 	}
 
 	if err := requireUserRole(userID, "diarista"); err != nil {
