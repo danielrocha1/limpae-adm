@@ -18,6 +18,11 @@ export function useAdminData(resourceKey) {
     setError("");
 
     try {
+      // Se o token for genérico, pula a chamada de API e vai direto pro fallback
+      if (token === "generic-admin-token-limpae") {
+        throw new Error("Local mode: using fallback data");
+      }
+
       const payload = await requestJson(resource.endpoint, {
         token,
         useApiBase: resource.useApiBase,
