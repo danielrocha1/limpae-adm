@@ -58,7 +58,7 @@ export default function UsersListPage({ roleFilter = "todos" }) {
   const [page, setPage] = useState(1);
   const [editingUser, setEditingUser] = useState(null);
   const [creating, setCreating] = useState(false);
-  const columns = useMemo(() => tableUserFields(), []);
+  const columns = useMemo(() => tableUserFields().filter((field) => field.name !== "Email"), []);
   const title = roleLabel(roleFilter);
 
   const roleUsers = useMemo(() => users.filter((user) => isUserInRole(user, roleFilter)), [roleFilter, users]);
@@ -247,9 +247,6 @@ export default function UsersListPage({ roleFilter = "todos" }) {
                           </div>
                         </td>
                       );
-                    }
-                    if (field.name === "Email") {
-                      return <td key={field.name} className="px-5 py-4 text-muted-foreground">{getUserEmail(user)}</td>;
                     }
                     if (field.name === "Role") {
                       return (
