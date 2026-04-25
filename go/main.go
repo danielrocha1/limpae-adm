@@ -81,6 +81,6 @@ func startRequestTimer() {
 			continue
 		}
 		_ = resp.Body.Close()
-		log.Println("Requisição feita com sucesso para https://limpae.onrender.com")
+		log.Println("Requisição feita com sucesso para https://limpae-jcqa.onrender.com")
 	}
 }
