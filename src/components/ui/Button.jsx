@@ -15,9 +15,10 @@ const sizes = {
   icon: "h-10 w-10",
 };
 
-export function Button({ className, variant = "default", size = "default", ...props }) {
+export function Button({ className, type = "button", variant = "default", size = "default", ...props }) {
   return (
     <button
+      type={type}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
         variants[variant],

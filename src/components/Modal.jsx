@@ -25,15 +25,18 @@ export default function Modal({ isOpen, onClose, title, children, footer }) {
         className="absolute inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200" 
         onClick={onClose}
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl animate-in flex-col overflow-hidden rounded-xl border bg-card shadow-2xl duration-200 zoom-in-95">
+      <div className="relative z-10 flex max-h-[90vh] w-full max-w-4xl animate-in flex-col overflow-hidden rounded-xl border bg-card shadow-2xl duration-200 zoom-in-95">
         {/* Header */}
         <div className="flex items-center justify-between border-b bg-slate-950 p-6 text-white dark:bg-white/[0.04]">
           <h3 className="text-xl font-black">{title}</h3>
-          <button 
+          <button
+            type="button"
+            aria-label="Fechar modal"
             onClick={onClose}
-            className="rounded-lg p-2 transition-colors hover:bg-white/10"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 px-3 text-sm font-semibold transition-colors hover:bg-white/10"
           >
             <X className="w-5 h-5" />
+            Fechar
           </button>
         </div>
 
