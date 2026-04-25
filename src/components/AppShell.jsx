@@ -15,11 +15,31 @@ export function AppShell() {
         </div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/" end>Dashboard</NavLink>
-          {resourceConfigs.map((resource) => (
-            <NavLink key={resource.key} to={`/${resource.path}`}>{resource.name}</NavLink>
-          ))}
-          <NavLink to="/auditoria">Auditoria backend</NavLink>
+          <NavLink to="/" end className={({ isActive }) => isActive ? "active" : ""}>
+            Dashboard
+          </NavLink>
+          
+          <div className="nav-group">
+            <span className="nav-group-title">Operacional</span>
+            {resourceConfigs.filter(r => ["users", "diarists", "services", "offers"].includes(r.key)).map((resource) => (
+              <NavLink key={resource.key} to={`/${resource.path}`}>{resource.name}</NavLink>
+            ))}
+          </div>
+
+          <div className="nav-group">
+            <span className="nav-group-title">Financeiro</span>
+            {resourceConfigs.filter(r => ["payments", "subscriptions"].includes(r.key)).map((resource) => (
+              <NavLink key={resource.key} to={`/${resource.path}`}>{resource.name}</NavLink>
+            ))}
+          </div>
+
+          <div className="nav-group">
+            <span className="nav-group-title">Qualidade & Auditoria</span>
+            {resourceConfigs.filter(r => ["reviews"].includes(r.key)).map((resource) => (
+              <NavLink key={resource.key} to={`/${resource.path}`}>{resource.name}</NavLink>
+            ))}
+            <NavLink to="/auditoria">Auditoria backend</NavLink>
+          </div>
         </nav>
 
         <div className="sidebar-footer">

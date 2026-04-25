@@ -27,13 +27,7 @@ export function AuthProvider({ children }) {
         throw new Error("A API nao retornou token de acesso.");
       }
 
-      let nextRole = "papel nao identificado";
-      try {
-        const roleResponse = await requestJson("/users-role", { token: nextToken });
-        nextRole = roleResponse?.role || nextRole;
-      } catch (roleError) {
-        nextRole = "papel nao identificado";
-      }
+      const nextRole = auth?.role || "papel nao identificado";
 
       setToken(nextToken);
       setRole(nextRole);

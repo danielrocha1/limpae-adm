@@ -1,11 +1,11 @@
 import { auditFindings } from "../resources";
 
 const recommendations = [
-  "Introduzir papel admin e middleware de autorizacao granular.",
-  "Substituir AutoMigrate como estrategia primaria por migrations versionadas.",
-  "Criar endpoints administrativos dedicados com filtros, paginacao e trilha de auditoria.",
-  "Normalizar a maquina de estados de servicos, ofertas, pagamentos e assinaturas.",
-  "Modelar especialidades e eventos operacionais de forma mais analitica.",
+  "Implementar ações de CRUD (editar/excluir) diretamente na interface administrativa.",
+  "Adicionar paginação e busca no lado do servidor (Server-side filtering) para lidar com grandes volumes de dados.",
+  "Configurar uma trilha de auditoria (Audit Log) para registrar ações feitas por administradores.",
+  "Normalizar a máquina de estados de serviços e pagamentos para garantir integridade.",
+  "Substituir AutoMigrate como estratégia primária por migrations versionadas no banco de dados.",
 ];
 
 export function BackendAuditPage() {
@@ -23,12 +23,12 @@ export function BackendAuditPage() {
         <article className="info-panel">
           <span className="eyebrow">Stack</span>
           <strong>Go + Fiber + GORM + PostgreSQL</strong>
-          <p>Backend funcional, mas ainda sem camada administrativa dedicada.</p>
+          <p>Backend robusto com camada administrativa dedicada e RBAC ativo.</p>
         </article>
         <article className="info-panel">
-          <span className="eyebrow">Schema</span>
-          <strong>AutoMigrate e modelos ricos</strong>
-          <p>Boa velocidade de evolucao, com custo alto de governanca e reproducibilidade.</p>
+          <span className="eyebrow">Interface</span>
+          <strong>React + Vite + Context API</strong>
+          <p>Painel moderno consumindo dados reais com estratégias de fallback.</p>
         </article>
       </section>
 

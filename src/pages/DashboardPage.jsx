@@ -4,12 +4,15 @@ import { averageBy, formatCurrency, sumBy } from "../lib/formatters";
 import { auditFindings } from "../resources";
 
 export function DashboardPage() {
-  const users = useAdminData("users");
-  const services = useAdminData("services");
-  const payments = useAdminData("payments");
-  const offers = useAdminData("offers");
+  const stats = useAdminData("stats");
   const reviews = useAdminData("reviews");
-  const subscriptions = useAdminData("subscriptions");
+
+  const dashboardStats = stats.data || {
+    users: 0,
+    services: 0,
+    total_revenue: 0,
+    diarists: 0,
+  };
 
   const reviewItems = reviews.data.map((review) => ({
     rating:
@@ -33,24 +36,23 @@ export function DashboardPage() {
           <span className="eyebrow">Resumo da stack</span>
           <h3>React admin sobre um backend Fiber + GORM com PostgreSQL</h3>
           <p>
-            O painel combina consumo direto da API com normalizacao de payload para suportar
-            contratos que hoje variam entre arrays simples e respostas paginadas.
+            O painel consome endpoints administrativos dedicados (/api/admin/*) com 
+            controle de acesso RBAC e pre-load de dados otimizado.
           </p>
         </div>
         <div className="hero-tags">
-          <span>API resiliente</span>
-          <span>Fallback visual</span>
-          <span>Auditoria tecnica</span>
-          <span>UX responsiva</span>
+          <span>Admin RBAC</span>
+          <span>Endpoints Dedicados</span>
+          <span>Auditoria Real</span>
+          <span>Performance Otimizada</span>
         </div>
       </section>
 
       <section className="stats-grid">
-        <StatCard label="Usuarios" value={users.data.length} detail="Base total observada" />
-        <StatCard label="Servicos" value={services.data.length} detail="Pipeline operacional" accent="ocean" />
-        <StatCard label="Receita observada" value={formatCurrency(sumBy(payments.data, "amount"))} detail="Soma dos pagamentos visiveis" accent="forest" />
-        <StatCard label="Ofertas" value={offers.data.length} detail="Liquidez do mural" accent="ember" />
-        <StatCard label="Assinaturas" value={subscriptions.data.length} detail="Carteira recorrente" accent="storm" />
+        <StatCard label="Usuarios" value={dashboardStats.users} detail="Base total cadastrada" />
+        <StatCard label="Diaristas" value={dashboardStats.diarists} detail="Profissionais ativos" accent="ocean" />
+        <StatCard label="Servicos" value={dashboardStats.services} detail="Total de atendimentos" accent="storm" />
+        <StatCard label="Receita Real" value={formatCurrency(dashboardStats.total_revenue)} detail="Volume financeiro aprovado" accent="forest" />
         <StatCard label="Media reviews" value={averageBy(reviewItems, "rating").toFixed(1)} detail="Qualidade percebida" accent="sun" />
       </section>
 

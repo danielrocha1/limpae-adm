@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export function LoginPage() {
-  const { error, isAuthenticated, login, status } = useAuth();
+  const { error, isAuthenticated, login, logout, status } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [localError, setLocalError] = useState("");
 
@@ -16,8 +16,15 @@ export function LoginPage() {
     setLocalError("");
 
     try {
-      await login(form);
+      const result = await login(form);
+      if (result.role !== "admin") {
+        logout();
+        throw new Error("Acesso negado: apenas administradores podem acessar este painel.");
+      }
     } catch (requestError) {
+      if (requestError.message.includes("Acesso negado")) {
+        logout();
+      }
       setLocalError(requestError.message || "Falha ao autenticar.");
     }
   }
@@ -31,9 +38,9 @@ export function LoginPage() {
           Consolide usuarios, operacao, financeiro, reputacao e auditoria tecnica do
           backend em uma unica superficie.
         </p>
-        <div className="callout warning">
-          O backend atual nao possui RBAC administrativo nativo. O painel destaca esse
-          risco e opera com os contratos reais disponiveis hoje.
+        <div className="callout success">
+          RBAC Administrativo ativo. Acesso restrito a usuários com perfil de administrador
+          para gestão de usuários, serviços e financeiro.
         </div>
       </div>
 
@@ -46,6 +53,7 @@ export function LoginPage() {
             value={form.email}
             onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             placeholder="admin@limpae.com"
+            required
           />
         </label>
         <label>
@@ -55,6 +63,7 @@ export function LoginPage() {
             value={form.password}
             onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
             placeholder="Sua senha"
+            required
           />
         </label>
         {(localError || error) && <div className="callout danger">{localError || error}</div>}

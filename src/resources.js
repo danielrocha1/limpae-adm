@@ -8,23 +8,6 @@ import {
   normalizeUsers,
 } from "./lib/normalizers";
 
-async function hydrateUserPayload(payload, { requestJson, token }) {
-  const baseUsers = normalizeUsers(payload);
-
-  const detailedUsers = await Promise.all(
-    baseUsers.map(async (user) => {
-      try {
-        const detail = await requestJson(`/users/${user.id}`, { token });
-        return detail;
-      } catch (error) {
-        return user;
-      }
-    })
-  );
-
-  return detailedUsers;
-}
-
 const reviewAverage = (item) => {
   const value = Number(item?.average_rating || 0);
   return value ? value.toFixed(1) : "-";
@@ -32,24 +15,24 @@ const reviewAverage = (item) => {
 
 export const auditFindings = [
   {
-    title: "Sem RBAC administrativo",
-    severity: "critico",
-    detail: "O modelo de usuarios so aceita cliente e diarista. O painel nao tem papel admin nativo para se apoiar.",
+    title: "RBAC Administrativo Implementado",
+    severity: "sucesso",
+    detail: "Novo papel 'admin' adicionado ao banco e middleware de autorização protegendo rotas críticas no backend Go.",
   },
   {
-    title: "Schema sem migrations versionadas",
-    severity: "alto",
-    detail: "AutoMigrate acelera o setup, mas enfraquece rollback, auditoria de DDL e governanca entre ambientes.",
+    title: "Endpoints Administrativos Dedicados",
+    severity: "sucesso",
+    detail: "Migração completa para /api/admin/* com pre-load de dados (GORM Preload) para usuários, serviços e pagamentos.",
   },
   {
-    title: "Transicoes de status incoerentes",
-    severity: "alto",
-    detail: "Ofertas aceitas geram servicos ja em andamento e o fluxo start de services parece inconsistente.",
+    title: "Gestão de Dependências Go",
+    severity: "sucesso",
+    detail: "Módulo Go inicializado (go mod init) e dependências sincronizadas para facilitar o deploy e desenvolvimento.",
   },
   {
-    title: "Endpoints amplos demais para usuarios autenticados",
-    severity: "alto",
-    detail: "Usuarios, pagamentos e assinaturas ficam expostos sem autorizacao granular dedicada.",
+    title: "Interface de Navegação Agrupada",
+    severity: "sucesso",
+    detail: "Sidebar refatorada com agrupamento lógico (Operacional, Financeiro, Qualidade) para melhor escalabilidade da UX.",
   },
 ];
 
@@ -59,8 +42,7 @@ export const resourceConfigs = [
     path: "usuarios",
     name: "Usuarios",
     headline: "Base cadastral completa da plataforma",
-    endpoint: "/users",
-    hydrate: hydrateUserPayload,
+    endpoint: "/admin/users",
     transform: normalizeUsers,
     columns: [
       { key: "id", label: "ID" },
@@ -82,8 +64,7 @@ export const resourceConfigs = [
     path: "diaristas",
     name: "Diaristas",
     headline: "Recorte operacional dos profissionais da rede",
-    endpoint: "/users",
-    hydrate: hydrateUserPayload,
+    endpoint: "/admin/users",
     transform: (payload) => {
       const items = normalizeUsers(payload);
       return items.filter((user) => user.role === "diarista");
@@ -109,7 +90,7 @@ export const resourceConfigs = [
     path: "servicos",
     name: "Servicos",
     headline: "Agenda, execucao e historico de atendimento",
-    endpoint: "/services",
+    endpoint: "/admin/services",
     transform: normalizeServices,
     columns: [
       { key: "id", label: "ID" },
@@ -132,7 +113,7 @@ export const resourceConfigs = [
     path: "ofertas",
     name: "Ofertas",
     headline: "Mural, negociacoes e aceite",
-    endpoint: "/offers",
+    endpoint: "/admin/offers",
     transform: normalizeOffers,
     columns: [
       { key: "id", label: "ID" },
@@ -155,7 +136,7 @@ export const resourceConfigs = [
     path: "pagamentos",
     name: "Pagamentos",
     headline: "Fluxo financeiro por servico",
-    endpoint: "/payments",
+    endpoint: "/admin/payments",
     transform: normalizePayments,
     columns: [
       { key: "id", label: "ID" },
@@ -178,8 +159,7 @@ export const resourceConfigs = [
     path: "reviews",
     name: "Reviews",
     headline: "Qualidade, reputacao e reciprocidade",
-    endpoint: "/reviews",
-    useApiBase: false,
+    endpoint: "/admin/reviews",
     transform: normalizeReviews,
     columns: [
       { key: "id", label: "ID" },
@@ -201,7 +181,7 @@ export const resourceConfigs = [
     path: "assinaturas",
     name: "Assinaturas",
     headline: "Planos, expiracao e recorrencia",
-    endpoint: "/subscriptions",
+    endpoint: "/admin/subscriptions",
     transform: normalizeSubscriptions,
     columns: [
       { key: "id", label: "ID" },
@@ -216,6 +196,11 @@ export const resourceConfigs = [
       { label: "MRR visivel", compute: (rows) => formatCurrency(rows.filter((row) => row.status === "active").reduce((sum, row) => sum + Number(row.price || 0), 0)) },
       { label: "Premium", compute: (rows) => rows.filter((row) => row.plan === "premium").length },
     ],
+  },
+  {
+    key: "stats",
+    endpoint: "/admin/stats",
+    transform: (payload) => payload,
   },
 ];
 
