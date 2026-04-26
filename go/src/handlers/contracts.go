@@ -185,6 +185,7 @@ type UserUpdateRequestDTO struct {
 	Phone             string                          `json:"phone"`
 	Cpf               string                          `json:"cpf"`
 	IsTestUser        *bool                           `json:"is_test_user"`
+	EmailVerified     *bool                           `json:"email_verified"`
 	Address           *AddressUpsertRequestDTO        `json:"address,omitempty"`
 	ClientPreferences *UserProfileUpsertRequestDTO    `json:"client_preferences,omitempty"`
 	DiaristProfile    *DiaristProfileUpsertRequestDTO `json:"diarist_profile,omitempty"`

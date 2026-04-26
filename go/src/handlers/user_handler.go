@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -337,6 +338,15 @@ func UpdateUser(c *fiber.Ctx) error {
 	if emailChanged {
 		user.EmailVerified = false
 		user.EmailVerifiedAt = nil
+	}
+	if request.EmailVerified != nil {
+		user.EmailVerified = *request.EmailVerified
+		if *request.EmailVerified {
+			now := time.Now()
+			user.EmailVerifiedAt = &now
+		} else {
+			user.EmailVerifiedAt = nil
+		}
 	}
 	if err := tx.Save(&user).Error; err != nil {
 		tx.Rollback()

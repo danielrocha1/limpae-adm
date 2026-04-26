@@ -10286,6 +10286,21 @@ export const modelSchemas = [
         "sensitive": false
       },
       {
+        "name": "EmailVerified",
+        "goType": "*bool",
+        "baseType": "bool",
+        "isArray": false,
+        "isPointer": true,
+        "isRelation": false,
+        "tags": {
+          "json": "email_verified"
+        },
+        "input": "checkbox",
+        "editable": true,
+        "table": true,
+        "sensitive": false
+      },
+      {
         "name": "Address",
         "goType": "*AddressUpsertRequestDTO",
         "baseType": "AddressUpsertRequestDTO",

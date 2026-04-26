@@ -13,6 +13,7 @@ const emptyPersonal = {
   phone: "",
   cpf: "",
   is_test_user: false,
+  email_verified: false,
 };
 
 const emptyAddress = {
@@ -100,6 +101,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
       phone: String(getValue(user, "Phone") || ""),
       cpf: getValue(user, "Cpf") || "",
       is_test_user: Boolean(getValue(user, "IsTestUser")),
+      email_verified: Boolean(getValue(user, "EmailVerified")),
     });
 
     setAddress({
@@ -165,7 +167,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
         ...address,
         latitude: toNumberOrZero(address.latitude),
         longitude: toNumberOrZero(address.longitude),
-        rooms: cleanRooms,
+        rooms: role === "diarista" ? [] : cleanRooms,
       },
     };
 
@@ -219,10 +221,20 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
             <Field label="Telefone" value={personal.phone} onChange={(value) => updatePersonal("phone", value)} required />
             <Field label="CPF" value={personal.cpf} onChange={(value) => updatePersonal("cpf", value)} required />
             <Field label="URL da foto" value={personal.photo} onChange={(value) => updatePersonal("photo", value)} className="md:col-span-2" />
-            <label className="flex h-11 items-center gap-3 self-end rounded-lg border bg-slate-50 px-3 text-sm font-semibold dark:bg-white/[0.04]">
+            <label className="hidden">
               <input type="checkbox" checked={personal.is_test_user} onChange={(event) => updatePersonal("is_test_user", event.target.checked)} />
               Usuário teste
             </label>
+            <ToggleField
+              label={role === "diarista" ? "Diarista teste" : "Usuario teste"}
+              checked={personal.is_test_user}
+              onChange={(checked) => updatePersonal("is_test_user", checked)}
+            />
+            <ToggleField
+              label="Email verificado"
+              checked={personal.email_verified}
+              onChange={(checked) => updatePersonal("email_verified", checked)}
+            />
           </div>
         </div>
       </Section>
@@ -243,23 +255,25 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
         </div>
       </Section>
 
-      <Section title="Cômodos">
-        <div className="space-y-3">
-          {rooms.map((room, index) => (
-            <div key={index} className="grid gap-3 rounded-lg border bg-slate-50 p-3 dark:bg-white/[0.04] sm:grid-cols-[1fr_120px_auto]">
-              <Field label="Cômodo" value={room.name} onChange={(value) => updateRoom(index, "name", value)} />
-              <Field label="Quantidade" type="number" value={room.quantity} onChange={(value) => updateRoom(index, "quantity", value)} />
-              <Button variant="outline" size="icon" className="self-end rounded-lg text-destructive hover:bg-destructive/10" onClick={() => removeRoom(index)} disabled={rooms.length === 1}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <Button variant="outline" className="rounded-lg" onClick={addRoom}>
-            <Plus className="h-4 w-4" />
-            Adicionar cômodo
-          </Button>
-        </div>
-      </Section>
+      {role !== "diarista" && (
+        <Section title="Cômodos">
+          <div className="space-y-3">
+            {rooms.map((room, index) => (
+              <div key={index} className="grid gap-3 rounded-lg border bg-slate-50 p-3 dark:bg-white/[0.04] sm:grid-cols-[1fr_120px_auto]">
+                <Field label="Cômodo" value={room.name} onChange={(value) => updateRoom(index, "name", value)} />
+                <Field label="Quantidade" type="number" value={room.quantity} onChange={(value) => updateRoom(index, "quantity", value)} />
+                <Button variant="outline" size="icon" className="self-end rounded-lg text-destructive hover:bg-destructive/10" onClick={() => removeRoom(index)} disabled={rooms.length === 1}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" className="rounded-lg" onClick={addRoom}>
+              <Plus className="h-4 w-4" />
+              Adicionar cômodo
+            </Button>
+          </div>
+        </Section>
+      )}
 
       {role === "diarista" ? (
         <Section title="Perfil da diarista">
@@ -341,6 +355,22 @@ function SelectField({ label, value, onChange, options }) {
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function ToggleField({ label, checked, onChange }) {
+  return (
+    <label className="flex h-11 items-center justify-between gap-3 self-end rounded-lg border bg-slate-50 px-3 text-sm font-semibold dark:bg-white/[0.04]">
+      <span>{label}</span>
+      <button
+        type="button"
+        className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-teal-400" : "bg-slate-300 dark:bg-slate-700"}`}
+        onClick={() => onChange(!checked)}
+        aria-pressed={checked}
+      >
+        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${checked ? "left-6" : "left-1"}`} />
+      </button>
     </label>
   );
 }
