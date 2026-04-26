@@ -160,9 +160,13 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
       .map((room) => ({ name: String(room.name).trim(), quantity: Math.max(1, Number(room.quantity) || 1) }));
 
     const payload = {
-      ...personal,
-      photo: String(personal.photo || "").length <= 255 ? personal.photo : "",
+      name: personal.name,
+      email: personal.email,
+      cpf: String(personal.cpf || "").replace(/\D/g, ""),
       phone: String(personal.phone || "").replace(/\D/g, ""),
+      photo: String(personal.photo || "").length <= 255 ? personal.photo : "",
+      is_test_user: personal.is_test_user,
+      email_verified: personal.email_verified,
       address: {
         ...address,
         latitude: toNumberOrZero(address.latitude),
@@ -183,7 +187,10 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
           .filter(Boolean),
       };
     } else {
-      payload.client_preferences = clientProfile;
+      payload.client_preferences = {
+        ...clientProfile,
+        has_pets: Boolean(clientProfile.has_pets),
+      };
     }
 
     return payload;
