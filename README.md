@@ -39,4 +39,4 @@ O painel consome os endpoints REST:
 
 ## Autenticacao
 
-A autenticacao de admin e simulada no frontend. Use qualquer email/senha no login de demonstracao; o painel salva um token mock em `localStorage` para habilitar as rotas protegidas.
+A autenticacao de admin e realizada via API. O painel salva o token JWT em `localStorage` para habilitar as rotas protegidas.

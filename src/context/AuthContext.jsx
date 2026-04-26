@@ -17,9 +17,23 @@ export function AuthProvider({ children }) {
     setError("");
 
     try {
-      const nextToken = `mock-admin-${Date.now()}`;
-      const nextRole = "admin";
-      const nextName = credentials?.email?.split("@")[0] || "Admin Limpae";
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://limpae-adm.onrender.com"}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || "Falha ao autenticar.");
+      }
+
+      const data = await response.json();
+      const nextToken = data.token;
+      const nextRole = data.role || "admin";
+      const nextName = data.name || credentials?.email?.split("@")[0] || "Admin Limpae";
 
       setToken(nextToken);
       setRole(nextRole);

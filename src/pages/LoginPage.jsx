@@ -7,8 +7,8 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@limpae.com.br");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
   const { login } = useAuth();
@@ -63,7 +63,7 @@ export default function LoginPage() {
             <div className="mb-6">
               <BadgeTitle />
               <h2 className="mt-4 text-2xl font-black">Entrar no painel</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Autenticacao mock para acesso administrativo.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Acesso administrativo ao painel.</p>
             </div>
 
             <div className="space-y-4">
@@ -89,9 +89,7 @@ export default function LoginPage() {
               Entrar
             </Button>
 
-            <div className="mt-5 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
-              Demo: admin@limpae.com.br / admin123
-            </div>
+
           </form>
         </div>
       </section>
