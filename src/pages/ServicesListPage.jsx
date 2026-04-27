@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
 import { useServices } from "../hooks/useServices";
 import Modal from "../components/Modal";
@@ -20,6 +20,7 @@ const statusConfig = {
 };
 
 const pageSize = 9;
+const allStatusFilter = "todos";
 
 function get(object, ...keys) {
   for (const key of keys) {
@@ -71,6 +72,7 @@ export default function ServicesListPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(allStatusFilter);
   const { data: servicePage, isLoading } = useServices({
     page,
     page_size: pageSize,
@@ -81,12 +83,26 @@ export default function ServicesListPage() {
 
   const totals = {
     all: pagination?.total_items ?? services.length,
-    finished: services.filter((service) => ["concluido", "concluído", "concluÃ­do"].includes(statusOf(service))).length,
+    finished: services.filter((service) => ["concluido", "concluído", "concluã­do"].includes(statusOf(service))).length,
     canceled: services.filter((service) => statusOf(service) === "cancelado").length,
   };
 
   const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(services.length / pageSize));
-  const visibleServices = services;
+  const statusOptions = useMemo(() => {
+    const counts = services.reduce((accumulator, service) => {
+      const status = statusOf(service);
+      accumulator[status] = (accumulator[status] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    return [
+      { value: allStatusFilter, label: "Todos", count: services.length },
+      ...Object.entries(counts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+        .map(([value, count]) => ({ value, label: value, count })),
+    ];
+  }, [services]);
+  const visibleServices = services.filter((service) => statusFilter === allStatusFilter || statusOf(service) === statusFilter);
 
   useEffect(() => {
     if (pagination?.page && pagination.page !== page) {
@@ -122,17 +138,37 @@ export default function ServicesListPage() {
       </section>
 
       <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-11 rounded-lg pl-10"
-            placeholder="Buscar por cliente, diarista, endereco ou status"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-11 rounded-lg pl-10"
+              placeholder="Buscar por cliente, diarista, endereco ou status"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((option) => {
+              const isActive = statusFilter === option.value;
+              return (
+                <Button
+                  key={option.value}
+                  variant="outline"
+                  className={`h-9 rounded-full px-3 text-xs font-black ${isActive ? "border-slate-950 bg-slate-950 text-white hover:bg-slate-800 hover:text-white dark:border-teal-400 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" : "bg-slate-50 dark:bg-white/[0.04]"}`}
+                  onClick={() => setStatusFilter(option.value)}
+                >
+                  {option.label}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${isActive ? "bg-white/15 text-white dark:bg-slate-950/10 dark:text-slate-950" : "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-200"}`}>
+                    {option.count}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </Card>
 
@@ -185,13 +221,14 @@ export default function ServicesListPage() {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        totalItems={pagination?.total_items ?? services.length}
+        totalItems={visibleServices.length}
         itemLabel="serviços"
+        helperText={statusFilter === allStatusFilter ? "Filtrados pela busca e pela pagina atual" : `Status ativo: ${statusFilter}`}
         onPrevious={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
       />
 
-      {services.length === 0 && (
+      {visibleServices.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
           Nenhum serviço encontrado com esses filtros.
         </div>
@@ -202,14 +239,17 @@ export default function ServicesListPage() {
   );
 }
 
-function PaginationBar({ page, totalPages, totalItems, itemLabel, onPrevious, onNext }) {
+function PaginationBar({ page, totalPages, totalItems, itemLabel, helperText, onPrevious, onNext }) {
   if (totalItems === 0) return null;
   return (
     <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Exibindo {totalItems} {itemLabel} filtrados
-        </p>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Exibindo {totalItems} {itemLabel} filtrados
+          </p>
+          {helperText ? <p className="mt-1 text-xs text-muted-foreground">{helperText}</p> : null}
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Página anterior">
             <ChevronLeft className="h-4 w-4" />
