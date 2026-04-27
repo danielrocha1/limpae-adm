@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, DollarSign, MapPin, PlayCircle, Search, XCircle } from "lucide-react";
+import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Clock, DollarSign, MapPin, PlayCircle, Search, SlidersHorizontal, X, XCircle } from "lucide-react";
 import { useServices } from "../hooks/useServices";
 import Modal from "../components/Modal";
 import { Badge } from "../components/ui/Badge";
@@ -21,6 +21,15 @@ const statusConfig = {
 
 const pageSize = 9;
 const allStatusFilter = "todos";
+const emptyFilters = {
+  id: "",
+  client: "",
+  diarist: "",
+  amountMin: "",
+  amountMax: "",
+  dateFrom: "",
+  dateTo: "",
+};
 
 function get(object, ...keys) {
   for (const key of keys) {
@@ -51,6 +60,14 @@ function yesNo(value) {
   return value ? "Sim" : "Nao";
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
 function userValue(user, key) {
   const snake = key.replace(/[A-Z]/g, (letter, index) => `${index ? "_" : ""}${letter.toLowerCase()}`);
   return get(user, key, key?.toLowerCase?.(), snake);
@@ -68,26 +85,39 @@ function serviceAddress(service) {
   return number ? `${street}, ${number}` : street;
 }
 
+function normalizeFilters(filters) {
+  return {
+    id: String(filters.id || "").trim(),
+    client: String(filters.client || "").trim(),
+    diarist: String(filters.diarist || "").trim(),
+    amountMin: String(filters.amountMin || "").trim(),
+    amountMax: String(filters.amountMax || "").trim(),
+    dateFrom: String(filters.dateFrom || "").trim(),
+    dateTo: String(filters.dateTo || "").trim(),
+  };
+}
+
+function countActiveFilters(filters) {
+  return Object.values(filters).filter(Boolean).length;
+}
+
 export default function ServicesListPage() {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedService, setSelectedService] = useState(null);
   const [statusFilter, setStatusFilter] = useState(allStatusFilter);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyFilters);
   const { data: servicePage, isLoading } = useServices({
     page,
     page_size: pageSize,
-    search: search.trim() || undefined,
+    search: appliedSearch.trim() || undefined,
   });
   const services = servicePage?.items || [];
   const pagination = servicePage?.pagination;
 
-  const totals = {
-    all: pagination?.total_items ?? services.length,
-    finished: services.filter((service) => ["concluido", "concluído", "concluã­do"].includes(statusOf(service))).length,
-    canceled: services.filter((service) => statusOf(service) === "cancelado").length,
-  };
-
-  const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(services.length / pageSize));
   const statusOptions = useMemo(() => {
     const counts = services.reduce((accumulator, service) => {
       const status = statusOf(service);
@@ -102,13 +132,109 @@ export default function ServicesListPage() {
         .map(([value, count]) => ({ value, label: value, count })),
     ];
   }, [services]);
-  const visibleServices = services.filter((service) => statusFilter === allStatusFilter || statusOf(service) === statusFilter);
+
+  const visibleServices = useMemo(() => {
+    return services.filter((service) => {
+      if (statusFilter !== allStatusFilter && statusOf(service) !== statusFilter) {
+        return false;
+      }
+
+      const serviceId = String(get(service, "ID", "id") || "");
+      if (appliedFilters.id && !serviceId.includes(appliedFilters.id)) {
+        return false;
+      }
+
+      const clientName = normalizeText(getNested(service, "Client", "Name") || getNested(service, "client", "Name"));
+      if (appliedFilters.client && !clientName.includes(normalizeText(appliedFilters.client))) {
+        return false;
+      }
+
+      const diaristName = normalizeText(getNested(service, "Diarist", "Name") || getNested(service, "diarist", "Name"));
+      if (appliedFilters.diarist && !diaristName.includes(normalizeText(appliedFilters.diarist))) {
+        return false;
+      }
+
+      const totalPrice = Number(get(service, "TotalPrice", "total_price") || 0);
+      const minAmount = appliedFilters.amountMin === "" ? null : Number(appliedFilters.amountMin);
+      const maxAmount = appliedFilters.amountMax === "" ? null : Number(appliedFilters.amountMax);
+      if (minAmount !== null && !Number.isNaN(minAmount) && totalPrice < minAmount) {
+        return false;
+      }
+      if (maxAmount !== null && !Number.isNaN(maxAmount) && totalPrice > maxAmount) {
+        return false;
+      }
+
+      const scheduledAt = get(service, "ScheduledAt", "scheduled_at");
+      const scheduledDate = scheduledAt ? new Date(scheduledAt).toISOString().slice(0, 10) : "";
+      if (appliedFilters.dateFrom && (!scheduledDate || scheduledDate < appliedFilters.dateFrom)) {
+        return false;
+      }
+      if (appliedFilters.dateTo && (!scheduledDate || scheduledDate > appliedFilters.dateTo)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [appliedFilters, services, statusFilter]);
+
+  const visibleTotals = useMemo(() => {
+    return {
+      all: visibleServices.length,
+      finished: visibleServices.filter((service) => ["concluido", "concluído", "concluã­do"].includes(statusOf(service))).length,
+      canceled: visibleServices.filter((service) => statusOf(service) === "cancelado").length,
+    };
+  }, [visibleServices]);
+
+  const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(services.length / pageSize));
+  const activeFilterCount = countActiveFilters(appliedFilters);
 
   useEffect(() => {
     if (pagination?.page && pagination.page !== page) {
       setPage(pagination.page);
     }
   }, [page, pagination?.page]);
+
+  useEffect(() => {
+    if (!isFilterDrawerOpen) return undefined;
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape") {
+        setIsFilterDrawerOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEsc);
+
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [isFilterDrawerOpen]);
+
+  function applySearch(event) {
+    event.preventDefault();
+    setAppliedSearch(searchInput.trim());
+    setPage(1);
+  }
+
+  function openFilterDrawer() {
+    setDraftFilters(appliedFilters);
+    setIsFilterDrawerOpen(true);
+  }
+
+  function applyDrawerFilters() {
+    setAppliedFilters(normalizeFilters(draftFilters));
+    setPage(1);
+    setIsFilterDrawerOpen(false);
+  }
+
+  function clearDrawerFilters() {
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setPage(1);
+    setIsFilterDrawerOpen(false);
+  }
 
   if (isLoading) {
     return (
@@ -126,31 +252,43 @@ export default function ServicesListPage() {
     <div className="space-y-6">
       <section className="rounded-xl border bg-white p-5 shadow-sm ring-1 ring-slate-200/60 dark:bg-white/[0.04] dark:ring-white/10">
         <Badge className="bg-slate-950 text-white dark:bg-white dark:text-slate-950">Operacao de campo</Badge>
-        <h1 className="mt-4 text-4xl font-black tracking-normal">Serviços</h1>
+        <h1 className="mt-4 text-4xl font-black tracking-normal">Servicos</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Acompanhe agenda, status, valor, cliente e diarista de cada serviço.
+          Acompanhe agenda, status, valor, cliente e diarista de cada servico.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <Metric label="Total" value={totals.all} />
-          <Metric label="Concluidos" value={totals.finished} tone="teal" />
-          <Metric label="Cancelados" value={totals.canceled} tone="rose" />
+          <Metric label="Visiveis" value={visibleTotals.all} />
+          <Metric label="Concluidos" value={visibleTotals.finished} tone="teal" />
+          <Metric label="Cancelados" value={visibleTotals.canceled} tone="rose" />
         </div>
       </section>
 
       <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-11 rounded-lg pl-10"
-              placeholder="Buscar por cliente, diarista, endereco ou status"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+          <form className="flex flex-col gap-3 md:flex-row" onSubmit={applySearch}>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-11 rounded-lg pl-10"
+                placeholder="Buscar por cliente, diarista, endereco ou status"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button className="h-11 rounded-lg bg-slate-950 px-4 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950" type="submit">
+                Buscar
+              </Button>
+              <Button variant="outline" className="h-11 rounded-lg px-4 font-black" onClick={openFilterDrawer}>
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtros
+                {activeFilterCount > 0 ? (
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] dark:bg-white/10">{activeFilterCount}</span>
+                ) : null}
+              </Button>
+            </div>
+          </form>
+
           <div className="flex flex-wrap gap-2">
             {statusOptions.map((option) => {
               const isActive = statusFilter === option.value;
@@ -222,17 +360,26 @@ export default function ServicesListPage() {
         page={page}
         totalPages={totalPages}
         totalItems={visibleServices.length}
-        itemLabel="serviços"
-        helperText={statusFilter === allStatusFilter ? "Filtrados pela busca e pela pagina atual" : `Status ativo: ${statusFilter}`}
+        itemLabel="servicos"
+        helperText={statusFilter === allStatusFilter ? "Filtrados pela busca, drawer e pagina atual" : `Status ativo: ${statusFilter}`}
         onPrevious={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
       />
 
       {visibleServices.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
-          Nenhum serviço encontrado com esses filtros.
+          Nenhum servico encontrado com esses filtros.
         </div>
       )}
+
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        filters={draftFilters}
+        onChange={setDraftFilters}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        onApply={applyDrawerFilters}
+        onClear={clearDrawerFilters}
+      />
 
       <ServiceDetailsModal service={selectedService} onClose={() => setSelectedService(null)} />
     </div>
@@ -251,13 +398,13 @@ function PaginationBar({ page, totalPages, totalItems, itemLabel, helperText, on
           {helperText ? <p className="mt-1 text-xs text-muted-foreground">{helperText}</p> : null}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Página anterior">
+          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Pagina anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="rounded-lg border bg-background px-3 py-2 text-sm font-semibold">
-            Página {page} de {totalPages}
+            Pagina {page} de {totalPages}
           </span>
-          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Próxima página">
+          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Proxima pagina">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -298,6 +445,82 @@ function InfoRow({ icon: Icon, value }) {
   );
 }
 
+function FilterDrawer({ isOpen, filters, onChange, onClose, onApply, onClear }) {
+  if (!isOpen) return null;
+
+  function updateField(field, value) {
+    onChange((current) => ({ ...current, [field]: value }));
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70]">
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={onClose} />
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-md animate-in slide-in-from-right flex-col border-l bg-white shadow-2xl dark:bg-slate-950">
+        <div className="flex items-center justify-between border-b bg-slate-950 p-5 text-white dark:bg-slate-900">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-white/60">Filtro avancado</p>
+            <h3 className="mt-1 text-xl font-black">Refinar servicos</h3>
+          </div>
+          <Button variant="outline" className="border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={onClose}>
+            <X className="h-4 w-4" />
+            Fechar
+          </Button>
+        </div>
+
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          <FilterField label="ID do servico">
+            <Input value={filters.id} onChange={(event) => updateField("id", event.target.value)} placeholder="Ex.: 145" />
+          </FilterField>
+
+          <FilterField label="Cliente">
+            <Input value={filters.client} onChange={(event) => updateField("client", event.target.value)} placeholder="Nome do cliente" />
+          </FilterField>
+
+          <FilterField label="Diarista">
+            <Input value={filters.diarist} onChange={(event) => updateField("diarist", event.target.value)} placeholder="Nome da diarista" />
+          </FilterField>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FilterField label="Valor minimo">
+              <Input type="number" step="0.01" value={filters.amountMin} onChange={(event) => updateField("amountMin", event.target.value)} placeholder="0,00" />
+            </FilterField>
+            <FilterField label="Valor maximo">
+              <Input type="number" step="0.01" value={filters.amountMax} onChange={(event) => updateField("amountMax", event.target.value)} placeholder="500,00" />
+            </FilterField>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FilterField label="Data inicial">
+              <Input type="date" value={filters.dateFrom} onChange={(event) => updateField("dateFrom", event.target.value)} />
+            </FilterField>
+            <FilterField label="Data final">
+              <Input type="date" value={filters.dateTo} onChange={(event) => updateField("dateTo", event.target.value)} />
+            </FilterField>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t bg-slate-50 p-5 dark:bg-white/[0.03]">
+          <Button variant="outline" className="rounded-lg" onClick={onClear}>
+            Limpar
+          </Button>
+          <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950" onClick={onApply}>
+            Aplicar filtros
+          </Button>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function FilterField({ label, children }) {
+  return (
+    <label className="space-y-2 text-sm font-semibold">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
 function ServiceDetailsModal({ service, onClose }) {
   if (!service) return null;
   const status = statusOf(service);
@@ -307,17 +530,17 @@ function ServiceDetailsModal({ service, onClose }) {
   const offer = get(service, "Offer", "offer");
   const review = get(service, "Review", "review", "reviews");
   return (
-    <Modal isOpen={Boolean(service)} onClose={onClose} title={`Serviço #${get(service, "ID", "id") || ""}`}>
+    <Modal isOpen={Boolean(service)} onClose={onClose} title={`Servico #${get(service, "ID", "id") || ""}`}>
       <div className="space-y-6">
-        <Section title="Resumo do serviço">
+        <Section title="Resumo do servico">
           <div className="grid gap-3 md:grid-cols-4">
-            <Detail label="ID do serviço" value={get(service, "ID", "id")} tone="slate" />
+            <Detail label="ID do servico" value={get(service, "ID", "id")} tone="slate" />
             <Detail label="Status" value={status} tone="amber" />
             <Detail label="Valor total" value={money(get(service, "TotalPrice", "total_price"))} tone="teal" />
-            <Detail label="Duração" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} tone="sky" />
+            <Detail label="Duracao" value={`${get(service, "DurationHours", "duration_hours") || "-"}h`} tone="sky" />
             <Detail label="Tipo" value={get(service, "ServiceType", "service_type")} className="md:col-span-2" />
             <Detail label="Agendado para" value={dateTime(get(service, "ScheduledAt", "scheduled_at"))} />
-            <Detail label="Concluído em" value={dateTime(get(service, "CompletedAt", "completed_at"))} />
+            <Detail label="Concluido em" value={dateTime(get(service, "CompletedAt", "completed_at"))} />
             <Detail label="Criado em" value={dateTime(get(service, "CreatedAt", "created_at"))} />
             <Detail label="Tem pets" value={yesNo(get(service, "HasPets", "has_pets"))} />
             <Detail label="Quartos" value={get(service, "RoomCount", "room_count")} />
@@ -325,11 +548,11 @@ function ServiceDetailsModal({ service, onClose }) {
           </div>
         </Section>
 
-        <Section title="Observações e motivos">
+        <Section title="Observacoes e motivos">
           <div className="grid gap-3 md:grid-cols-3">
-            <Detail label="Observações" value={get(service, "Observations", "observations")} />
+            <Detail label="Observacoes" value={get(service, "Observations", "observations")} />
             <Detail label="Motivo de cancelamento" value={get(service, "CancelReason", "cancel_reason")} />
-            <Detail label="Motivo de rejeição" value={get(service, "RejectionReason", "rejection_reason")} />
+            <Detail label="Motivo de rejeicao" value={get(service, "RejectionReason", "rejection_reason")} />
           </div>
         </Section>
 
@@ -340,7 +563,7 @@ function ServiceDetailsModal({ service, onClose }) {
           </div>
         </Section>
 
-        <Section title="Endereço">
+        <Section title="Endereco">
           <AddressPanel address={address} />
         </Section>
 
@@ -352,25 +575,25 @@ function ServiceDetailsModal({ service, onClose }) {
               <Detail label="Valor inicial" value={money(get(offer, "InitialValue", "initial_value"))} />
               <Detail label="Valor atual" value={money(get(offer, "CurrentValue", "current_value"))} />
               <Detail label="Tipo" value={get(offer, "ServiceType", "service_type")} className="md:col-span-2" />
-              <Detail label="Observações" value={get(offer, "Observations", "observations")} className="md:col-span-2" />
+              <Detail label="Observacoes" value={get(offer, "Observations", "observations")} className="md:col-span-2" />
             </div>
           ) : (
-            <EmptyState text="Nenhuma oferta carregada junto deste serviço." />
+            <EmptyState text="Nenhuma oferta carregada junto deste servico." />
           )}
         </Section>
 
-        <Section title="Avaliação">
+        <Section title="Avaliacao">
           {review ? (
             <div className="grid gap-3 md:grid-cols-4">
               <Detail label="ID" value={get(review, "ID", "id")} />
               <Detail label="Cliente rating" value={get(review, "ClientRating", "client_rating")} />
               <Detail label="Diarista rating" value={get(review, "DiaristRating", "diarist_rating")} />
               <Detail label="Criada em" value={dateTime(get(review, "CreatedAt", "created_at"))} />
-              <Detail label="Comentário cliente" value={get(review, "ClientComment", "client_comment")} className="md:col-span-2" />
-              <Detail label="Comentário diarista" value={get(review, "DiaristComment", "diarist_comment")} className="md:col-span-2" />
+              <Detail label="Comentario cliente" value={get(review, "ClientComment", "client_comment")} className="md:col-span-2" />
+              <Detail label="Comentario diarista" value={get(review, "DiaristComment", "diarist_comment")} className="md:col-span-2" />
             </div>
           ) : (
-            <EmptyState text="Nenhuma avaliação carregada para este serviço." />
+            <EmptyState text="Nenhuma avaliacao carregada para este servico." />
           )}
         </Section>
       </div>
@@ -388,7 +611,7 @@ function Section({ title, children }) {
 }
 
 function UserPanel({ title, user }) {
-  if (!user) return <EmptyState text={`${title} não carregado pela API.`} />;
+  if (!user) return <EmptyState text={`${title} nao carregado pela API.`} />;
   const name = userValue(user, "Name");
   const email = userValue(user, "Email");
   const role = userValue(user, "Role");
@@ -417,26 +640,26 @@ function UserPanel({ title, user }) {
 }
 
 function AddressPanel({ address }) {
-  if (!address) return <EmptyState text="Endereço não carregado pela API." />;
+  if (!address) return <EmptyState text="Endereco nao carregado pela API." />;
   const rooms = get(address, "Rooms", "rooms") || [];
   return (
     <div className="space-y-3">
       <div className="grid gap-3 md:grid-cols-4">
         <Detail label="Rua" value={addressValue(address, "Street")} className="md:col-span-2" />
-        <Detail label="Número" value={addressValue(address, "Number")} />
+        <Detail label="Numero" value={addressValue(address, "Number")} />
         <Detail label="Complemento" value={addressValue(address, "Complement")} />
         <Detail label="Bairro" value={addressValue(address, "Neighborhood")} />
         <Detail label="Cidade" value={addressValue(address, "City")} />
         <Detail label="Estado" value={addressValue(address, "State")} />
         <Detail label="CEP" value={addressValue(address, "Zipcode")} />
-        <Detail label="Tipo residência" value={addressValue(address, "ResidenceType")} />
-        <Detail label="Referência" value={addressValue(address, "ReferencePoint")} className="md:col-span-2" />
+        <Detail label="Tipo residencia" value={addressValue(address, "ResidenceType")} />
+        <Detail label="Referencia" value={addressValue(address, "ReferencePoint")} className="md:col-span-2" />
         <Detail label="Latitude" value={addressValue(address, "Latitude")} />
         <Detail label="Longitude" value={addressValue(address, "Longitude")} />
       </div>
       {Array.isArray(rooms) && rooms.length > 0 && (
         <div className="rounded-lg border p-3">
-          <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Cômodos</p>
+          <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Comodos</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {rooms.map((room) => (
               <div key={get(room, "ID", "id") || `${get(room, "Name", "name")}`} className="flex justify-between rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-white/[0.04]">
