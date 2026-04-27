@@ -34,6 +34,39 @@ func TestUpdateUserRejectsProtectedExtraField(t *testing.T) {
 	}
 }
 
+func TestUpdateUserAllowsMissingCpfAndPreservesExistingValue(t *testing.T) {
+	db := setupFlowTestDB(t)
+	user := seedUser(t, db, t.Name()+"-user-with-cpf", "cliente")
+	user.Cpf = "52998224725"
+	if err := db.Save(&user).Error; err != nil {
+		t.Fatalf("save user cpf: %v", err)
+	}
+
+	app := testAppWithUser(user.ID, func(app *fiber.App) {
+		app.Put("/users/:id", UpdateUser)
+	})
+
+	payload := `{"name":"Novo Nome","email":"novo@example.com","phone":"11999999999"}`
+	req := httptest.NewRequest("PUT", "/users/"+strconv.Itoa(int(user.ID)), bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var refreshed models.User
+	if err := db.First(&refreshed, user.ID).Error; err != nil {
+		t.Fatalf("reload user: %v", err)
+	}
+	if refreshed.Cpf != "52998224725" {
+		t.Fatalf("cpf = %q, want existing value preserved", refreshed.Cpf)
+	}
+}
+
 func TestCreateOfferRejectsProtectedFieldAndValidatesBody(t *testing.T) {
 	db := setupFlowTestDB(t)
 	client := seedUser(t, db, t.Name()+"-client", "cliente")

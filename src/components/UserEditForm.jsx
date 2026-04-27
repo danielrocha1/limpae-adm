@@ -45,10 +45,6 @@ const emptyDiaristProfile = {
   available: true,
 };
 
-function hasMaskedCpf(value) {
-  return String(value || "").includes("*");
-}
-
 function pick(record, ...keys) {
   for (const key of keys) {
     if (record?.[key] !== undefined && record?.[key] !== null) return record[key];
@@ -93,7 +89,6 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
   const isEditing = Boolean(user);
   const role = getUserRole(user) || (defaultRole === "todos" ? "cliente" : defaultRole);
   const isSaving = updateMutation.isPending || createMutation.isPending;
-  const cpfWasMasked = isEditing && hasMaskedCpf(personal.cpf);
 
   useEffect(() => {
     const userAddress = firstAddress(user);
@@ -203,13 +198,6 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const cpfDigits = String(personal.cpf || "").replace(/\D/g, "");
-
-    if (cpfWasMasked || cpfDigits.length !== 11) {
-      addToast("Informe o CPF completo do cliente para salvar as alteracoes.", "error");
-      return;
-    }
-
     const payload = buildPayload();
 
     try {
@@ -238,13 +226,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
             <Field label="Nome" value={personal.name} onChange={(value) => updatePersonal("name", value)} required />
             <Field label="Email" type="email" value={personal.email} onChange={(value) => updatePersonal("email", value)} required />
             <Field label="Telefone" value={personal.phone} onChange={(value) => updatePersonal("phone", value)} required />
-            <Field
-              label="CPF"
-              value={personal.cpf}
-              onChange={(value) => updatePersonal("cpf", value)}
-              required
-              hint={cpfWasMasked ? "A API devolve o CPF mascarado. Informe o CPF completo novamente para salvar." : ""}
-            />
+            <Field label="CPF" value={personal.cpf} onChange={(value) => updatePersonal("cpf", value)} required={!isEditing} />
             <Field label="URL da foto" value={personal.photo} onChange={(value) => updatePersonal("photo", value)} className="md:col-span-2" />
             <label className="hidden">
               <input type="checkbox" checked={personal.is_test_user} onChange={(event) => updatePersonal("is_test_user", event.target.checked)} />
@@ -349,7 +331,7 @@ function Section({ title, icon: Icon, children }) {
   );
 }
 
-function Field({ label, value, onChange, type = "text", required = false, className = "", hint = "" }) {
+function Field({ label, value, onChange, type = "text", required = false, className = "" }) {
   return (
     <label className={`space-y-2 text-sm font-semibold ${className}`}>
       <span>{label}</span>
@@ -361,7 +343,6 @@ function Field({ label, value, onChange, type = "text", required = false, classN
         required={required}
         step={type === "number" ? "any" : undefined}
       />
-      {hint ? <span className="block text-xs font-medium text-amber-700 dark:text-amber-300">{hint}</span> : null}
     </label>
   );
 }

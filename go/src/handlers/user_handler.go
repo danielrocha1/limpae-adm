@@ -305,9 +305,7 @@ func UpdateUser(c *fiber.Ctx) error {
 	email := validateEmailField(validator, "email", request.Email)
 	phoneDigits := validatePhoneField(validator, "phone", request.Phone)
 	cpf := strings.TrimSpace(request.Cpf)
-	if cpf == "" {
-		validator.Add("cpf", "is required")
-	} else if !isValidCPF(cpf) {
+	if cpf != "" && !isValidCPF(cpf) {
 		validator.Add("cpf", "is invalid")
 	}
 	if validator.HasErrors() {
@@ -331,7 +329,9 @@ func UpdateUser(c *fiber.Ctx) error {
 	emailChanged := user.Email != email
 	user.Email = email
 	user.Phone = phoneValue
-	user.Cpf = cpf
+	if cpf != "" {
+		user.Cpf = cpf
+	}
 	if request.IsTestUser != nil {
 		user.IsTestUser = *request.IsTestUser
 	}
