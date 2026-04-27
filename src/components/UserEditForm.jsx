@@ -77,6 +77,10 @@ function toNumberOrZero(value) {
   return Number(value) || 0;
 }
 
+function normalizeDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 export default function UserEditForm({ user, defaultRole = "cliente", onSuccess }) {
   const [personal, setPersonal] = useState(emptyPersonal);
   const [address, setAddress] = useState(emptyAddress);
@@ -155,6 +159,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
   }
 
   function buildPayload() {
+    const cpfDigits = normalizeDigits(personal.cpf);
     const cleanRooms = rooms
       .filter((room) => String(room.name || "").trim())
       .map((room) => ({ name: String(room.name).trim(), quantity: Math.max(1, Number(room.quantity) || 1) }));
@@ -162,8 +167,7 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
     const payload = {
       name: personal.name,
       email: personal.email,
-      cpf: String(personal.cpf || "").replace(/\D/g, ""),
-      phone: String(personal.phone || "").replace(/\D/g, ""),
+      phone: normalizeDigits(personal.phone),
       photo: String(personal.photo || "").length <= 255 ? personal.photo : "",
       is_test_user: personal.is_test_user,
       email_verified: personal.email_verified,
@@ -191,6 +195,10 @@ export default function UserEditForm({ user, defaultRole = "cliente", onSuccess 
         ...clientProfile,
         has_pets: Boolean(clientProfile.has_pets),
       };
+    }
+
+    if (!isEditing || cpfDigits.length === 11) {
+      payload.cpf = cpfDigits;
     }
 
     return payload;
