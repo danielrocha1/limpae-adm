@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, MapPin, Search, UserRound } from "lucide-react";
 import { useOffers } from "../hooks/useOffers";
 import Modal from "../components/Modal";
@@ -38,11 +38,17 @@ function addressValue(address, key) {
 }
 
 const pageSize = 9;
+const allStatusFilter = "todas";
+
+function normalizeStatus(value) {
+  return String(value || "sem status").trim().toLowerCase();
+}
 
 export default function OffersListPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedOffer, setSelectedOffer] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(allStatusFilter);
   const { data: offerPage, isLoading } = useOffers({
     page,
     page_size: pageSize,
@@ -51,7 +57,21 @@ export default function OffersListPage() {
   const offers = offerPage?.items || [];
   const pagination = offerPage?.pagination;
   const totalPages = Math.max(1, pagination?.total_pages ?? Math.ceil(offers.length / pageSize));
-  const visibleOffers = offers;
+  const statusOptions = useMemo(() => {
+    const counts = offers.reduce((accumulator, offer) => {
+      const status = normalizeStatus(get(offer, "Status", "status"));
+      accumulator[status] = (accumulator[status] || 0) + 1;
+      return accumulator;
+    }, {});
+
+    return [
+      { value: allStatusFilter, label: "Todas", count: offers.length },
+      ...Object.entries(counts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+        .map(([value, count]) => ({ value, label: value, count })),
+    ];
+  }, [offers]);
+  const visibleOffers = offers.filter((offer) => statusFilter === allStatusFilter || normalizeStatus(get(offer, "Status", "status")) === statusFilter);
 
   useEffect(() => {
     if (pagination?.page && pagination.page !== page) {
@@ -77,22 +97,43 @@ export default function OffersListPage() {
         <Badge className="bg-slate-950 text-white dark:bg-white dark:text-slate-950">Mural operacional</Badge>
         <h1 className="mt-4 text-4xl font-black tracking-normal">Ofertas</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Acompanhe ofertas abertas, negociações e valores publicados pelos clientes.
+          Acompanhe ofertas abertas, negociacoes e valores publicados pelos clientes.
         </p>
       </section>
 
       <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
-        <div className="relative max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-11 rounded-lg pl-10"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Buscar por cliente, tipo de serviço ou status"
-          />
+        <div className="space-y-4">
+          <div className="relative max-w-xl">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-11 rounded-lg pl-10"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Buscar por cliente, tipo de servico ou status"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((option) => {
+              const isActive = statusFilter === option.value;
+              return (
+                <Button
+                  key={option.value}
+                  variant="outline"
+                  className={`h-9 rounded-full px-3 text-xs font-black ${isActive ? "border-slate-950 bg-slate-950 text-white hover:bg-slate-800 hover:text-white dark:border-teal-400 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300" : "bg-slate-50 dark:bg-white/[0.04]"}`}
+                  onClick={() => setStatusFilter(option.value)}
+                >
+                  {option.label}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] ${isActive ? "bg-white/15 text-white dark:bg-slate-950/10 dark:text-slate-950" : "bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-200"}`}>
+                    {option.count}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </Card>
 
@@ -113,7 +154,7 @@ export default function OffersListPage() {
 
               <div className="space-y-4 p-5">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Tipo de serviço</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Tipo de servico</p>
                   <h2 className="mt-1 text-lg font-black">{get(offer, "ServiceType", "service_type") || "-"}</h2>
                 </div>
 
@@ -155,15 +196,16 @@ export default function OffersListPage() {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        totalItems={pagination?.total_items ?? offers.length}
+        totalItems={visibleOffers.length}
         itemLabel="ofertas"
+        helperText={statusFilter === allStatusFilter ? "Filtradas pela busca e pela pagina atual" : `Status ativo: ${statusFilter}`}
         onPrevious={() => setPage((value) => Math.max(1, value - 1))}
         onNext={() => setPage((value) => Math.min(totalPages, value + 1))}
       />
 
-      {offers.length === 0 && (
+      {visibleOffers.length === 0 && (
         <div className="rounded-xl border border-dashed bg-white py-16 text-center text-muted-foreground dark:bg-white/[0.04]">
-          Nenhuma oferta encontrada.
+          Nenhuma oferta encontrada com esse filtro.
         </div>
       )}
 
@@ -172,22 +214,25 @@ export default function OffersListPage() {
   );
 }
 
-function PaginationBar({ page, totalPages, totalItems, itemLabel, onPrevious, onNext }) {
+function PaginationBar({ page, totalPages, totalItems, itemLabel, helperText, onPrevious, onNext }) {
   if (totalItems === 0) return null;
   return (
     <Card className="border-0 bg-white p-4 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/[0.04] dark:ring-white/10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Exibindo {totalItems} {itemLabel} filtradas
-        </p>
+        <div>
+          <p className="text-sm text-muted-foreground">
+            Exibindo {totalItems} {itemLabel} filtradas
+          </p>
+          {helperText ? <p className="mt-1 text-xs text-muted-foreground">{helperText}</p> : null}
+        </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Página anterior">
+          <Button variant="outline" size="icon" disabled={page === 1} onClick={onPrevious} title="Pagina anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="rounded-lg border bg-background px-3 py-2 text-sm font-semibold">
-            Página {page} de {totalPages}
+            Pagina {page} de {totalPages}
           </span>
-          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Próxima página">
+          <Button variant="outline" size="icon" disabled={page === totalPages} onClick={onNext} title="Proxima pagina">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -209,15 +254,15 @@ function OfferDetailsModal({ offer, onClose }) {
           <div className="grid gap-3 md:grid-cols-4">
             <Detail label="ID" value={get(offer, "ID", "id")} />
             <Detail label="Status" value={get(offer, "Status", "status")} />
-            <Detail label="Tipo de serviço" value={get(offer, "ServiceType", "service_type")} className="md:col-span-2" />
+            <Detail label="Tipo de servico" value={get(offer, "ServiceType", "service_type")} className="md:col-span-2" />
             <Detail label="Agendada para" value={dateTime(get(offer, "ScheduledAt", "scheduled_at"))} />
-            <Detail label="Duração" value={`${get(offer, "DurationHours", "duration_hours") || "-"}h`} />
+            <Detail label="Duracao" value={`${get(offer, "DurationHours", "duration_hours") || "-"}h`} />
             <Detail label="Criada em" value={dateTime(get(offer, "CreatedAt", "created_at"))} />
             <Detail label="Atualizada em" value={dateTime(get(offer, "UpdatedAt", "updated_at"))} />
           </div>
         </Section>
 
-        <Section title="Valores e vínculos">
+        <Section title="Valores e vinculos">
           <div className="grid gap-3 md:grid-cols-4">
             <Detail label="Valor inicial" value={money(get(offer, "InitialValue", "initial_value"))} />
             <Detail label="Valor atual" value={money(get(offer, "CurrentValue", "current_value"))} />
@@ -229,7 +274,7 @@ function OfferDetailsModal({ offer, onClose }) {
 
         <Section title="Textos operacionais">
           <div className="grid gap-3 md:grid-cols-2">
-            <Detail label="Observações" value={get(offer, "Observations", "observations")} />
+            <Detail label="Observacoes" value={get(offer, "Observations", "observations")} />
             <Detail label="Motivo de cancelamento" value={get(offer, "CancelReason", "cancel_reason")} />
           </div>
         </Section>
@@ -241,11 +286,11 @@ function OfferDetailsModal({ offer, onClose }) {
           </div>
         </Section>
 
-        <Section title="Endereço">
+        <Section title="Endereco">
           <AddressPanel address={address} />
         </Section>
 
-        <Section title={`Negociações (${Array.isArray(negotiations) ? negotiations.length : 0})`}>
+        <Section title={`Negociacoes (${Array.isArray(negotiations) ? negotiations.length : 0})`}>
           {Array.isArray(negotiations) && negotiations.length > 0 ? (
             <div className="space-y-3">
               {negotiations.map((negotiation) => (
@@ -253,7 +298,7 @@ function OfferDetailsModal({ offer, onClose }) {
               ))}
             </div>
           ) : (
-            <EmptyState text="Nenhuma negociação carregada para esta oferta." />
+            <EmptyState text="Nenhuma negociacao carregada para esta oferta." />
           )}
         </Section>
       </div>
@@ -269,8 +314,8 @@ function NegotiationPanel({ negotiation }) {
         <Detail label="ID" value={get(negotiation, "ID", "id")} />
         <Detail label="Status" value={get(negotiation, "Status", "status")} />
         <Detail label="Contraproposta" value={money(get(negotiation, "CounterValue", "counter_value"))} />
-        <Detail label="Duração" value={`${get(negotiation, "CounterDurationHours", "counter_duration_hours") || "-"}h`} />
-        <Detail label="Distância diarista" value={get(negotiation, "DiaristDistance", "diarist_distance")} />
+        <Detail label="Duracao" value={`${get(negotiation, "CounterDurationHours", "counter_duration_hours") || "-"}h`} />
+        <Detail label="Distancia diarista" value={get(negotiation, "DiaristDistance", "diarist_distance")} />
         <Detail label="Rating diarista" value={get(negotiation, "DiaristRating", "diarist_rating")} />
         <Detail label="Criada em" value={dateTime(get(negotiation, "CreatedAt", "created_at"))} />
         <Detail label="Atualizada em" value={dateTime(get(negotiation, "UpdatedAt", "updated_at"))} />
@@ -278,7 +323,7 @@ function NegotiationPanel({ negotiation }) {
         <Detail label="Motivo de recusa" value={get(negotiation, "RejectionReason", "rejection_reason")} className="md:col-span-2" />
       </div>
       <div className="mt-4">
-        <UserPanel title="Diarista da negociação" user={diarist} />
+        <UserPanel title="Diarista da negociacao" user={diarist} />
       </div>
     </div>
   );
@@ -294,7 +339,7 @@ function Section({ title, children }) {
 }
 
 function UserPanel({ title, user }) {
-  if (!user) return <EmptyState text={`${title} não carregado pela API.`} />;
+  if (!user) return <EmptyState text={`${title} nao carregado pela API.`} />;
   return (
     <div className="rounded-xl border bg-slate-50 p-4 dark:bg-white/[0.04]">
       <div className="flex items-center gap-3">
@@ -312,33 +357,33 @@ function UserPanel({ title, user }) {
         <Detail label="Telefone" value={userValue(user, "Phone")} />
         <Detail label="CPF" value={userValue(user, "Cpf")} />
         <Detail label="Email verificado" value={yesNo(userValue(user, "EmailVerified"))} />
-        <Detail label="Usuário teste" value={yesNo(userValue(user, "IsTestUser"))} />
+        <Detail label="Usuario teste" value={yesNo(userValue(user, "IsTestUser"))} />
       </div>
     </div>
   );
 }
 
 function AddressPanel({ address }) {
-  if (!address) return <EmptyState text="Endereço não carregado pela API." />;
+  if (!address) return <EmptyState text="Endereco nao carregado pela API." />;
   const rooms = get(address, "Rooms", "rooms") || [];
   return (
     <div className="space-y-3">
       <div className="grid gap-3 md:grid-cols-4">
         <Detail label="Rua" value={addressValue(address, "Street")} className="md:col-span-2" />
-        <Detail label="Número" value={addressValue(address, "Number")} />
+        <Detail label="Numero" value={addressValue(address, "Number")} />
         <Detail label="Complemento" value={addressValue(address, "Complement")} />
         <Detail label="Bairro" value={addressValue(address, "Neighborhood")} />
         <Detail label="Cidade" value={addressValue(address, "City")} />
         <Detail label="Estado" value={addressValue(address, "State")} />
         <Detail label="CEP" value={addressValue(address, "Zipcode")} />
-        <Detail label="Tipo residência" value={addressValue(address, "ResidenceType")} />
-        <Detail label="Referência" value={addressValue(address, "ReferencePoint")} className="md:col-span-2" />
+        <Detail label="Tipo residencia" value={addressValue(address, "ResidenceType")} />
+        <Detail label="Referencia" value={addressValue(address, "ReferencePoint")} className="md:col-span-2" />
         <Detail label="Latitude" value={addressValue(address, "Latitude")} />
         <Detail label="Longitude" value={addressValue(address, "Longitude")} />
       </div>
       {Array.isArray(rooms) && rooms.length > 0 && (
         <div className="rounded-lg border p-3">
-          <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Cômodos</p>
+          <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Comodos</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {rooms.map((room) => (
               <div key={get(room, "ID", "id") || `${get(room, "Name", "name")}`} className="flex justify-between rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-white/[0.04]">
